@@ -1,0 +1,144 @@
+<h3 id="automatic-installation-recommended">Automatic Installation
+(Recommended)</h3>
+<ol type="1">
+<li>Download the plugin ZIP file from GitHub or your source</li>
+<li>Go to <strong>Plugins → Add New → Upload Plugin</strong> in your
+WordPress admin</li>
+<li>Choose the ZIP file and click <strong>Install Now</strong></li>
+<li>Click <strong>Activate Plugin</strong></li>
+</ol>
+<h3 id="manual-installation-via-ftp">Manual Installation via FTP</h3>
+<ol type="1">
+<li>Download and extract the plugin ZIP file</li>
+<li>Upload the <code>jpkcom-hide-login</code> folder to
+<code>/wp-content/plugins/</code></li>
+<li>Activate the plugin through the <strong>Plugins</strong> menu in
+WordPress</li>
+</ol>
+<h3 id="after-activation">After Activation</h3>
+<ol type="1">
+<li>You’ll see a success notice showing your new login URL (default:
+<code>https://yourdomain.com/jpkcom-login/</code>)</li>
+<li><strong>Bookmark this URL immediately!</strong></li>
+<li>Go to <strong>Settings → Hide Login</strong> to customize your
+settings</li>
+<li>(Optional) Add your IP to the whitelist to prevent accidental
+lockout</li>
+</ol>
+<hr />
+<h3 id="configuration">Configuration</h3>
+<h4 id="basic-settings">Basic Settings</h4>
+<p>Navigate to <strong>Settings → Hide Login</strong> in your WordPress
+admin.</p>
+<h5 id="custom-login-slug">Custom Login Slug</h5>
+<ol type="1">
+<li>Enter your desired slug in the <strong>Custom Login URL
+Slug</strong> field</li>
+<li>Avoid using these forbidden slugs:
+<ul>
+<li><code>login</code>, <code>admin</code>, <code>dashboard</code>,
+<code>wp-admin</code>, <code>wp-login</code></li>
+</ul></li>
+<li>The slug cannot be the same as an existing page or post URL</li>
+<li>Click <strong>Save Changes</strong></li>
+</ol>
+<p>Your new login URL will be:
+<code>https://yourdomain.com/your-custom-slug/</code></p>
+<h4 id="brute-force-protection">Brute Force Protection</h4>
+<p><strong>Automatic Protection</strong> - Fully customizable!</p>
+<ul>
+<li>Default settings: <strong>5 failed login attempts</strong> within
+<strong>60 seconds</strong> blocks the IP for <strong>10
+minutes</strong></li>
+<li><strong>Customize thresholds</strong> via admin interface: max
+attempts, attempt window, and block duration</li>
+<li>Blocked IPs are shown in the admin interface with expiration
+times</li>
+<li>View currently blocked IPs under <strong>Currently Blocked
+IPs</strong> section</li>
+<li>Click <strong>Clear All Blocked IPs</strong> to manually unblock all
+IPs</li>
+</ul>
+<h4 id="ip-whitelist-management">IP Whitelist Management</h4>
+<p>Prevent trusted IPs from being blocked:</p>
+<ol type="1">
+<li>Go to <strong>Settings → Hide Login</strong></li>
+<li>Scroll to <strong>IP Whitelist</strong> section</li>
+<li>Your current IP is displayed for reference</li>
+<li>Enter an IP address or CIDR range (e.g.,
+<code>192.168.1.0/24</code>)</li>
+<li>Click <strong>Add to Whitelist</strong></li>
+</ol>
+<p><strong>Whitelisted IPs:</strong> - Will never be blocked by brute
+force protection - Can access the login page even after failed attempts
+- Can be removed at any time using the <strong>Remove</strong>
+button</p>
+<p><strong>CIDR Range Examples:</strong> - Single IP:
+<code>192.168.1.100</code> - Subnet: <code>192.168.1.0/24</code>
+(192.168.1.1 - 192.168.1.254) - Large range: <code>10.0.0.0/8</code>
+(10.0.0.0 - 10.255.255.255)</p>
+<h4 id="multisite-configuration">Multisite Configuration</h4>
+<p>For <strong>WordPress Multisite</strong> installations:</p>
+<h5 id="network-wide-settings">Network-Wide Settings</h5>
+<ol type="1">
+<li>Go to <strong>Network Admin → Settings → Hide Login
+(Network)</strong></li>
+<li>Set a global slug for all sites in the network</li>
+<li>Leave empty to allow each site to use its own slug</li>
+</ol>
+<h5 id="per-site-settings">Per-Site Settings</h5>
+<ol type="1">
+<li>Each site can still access <strong>Settings → Hide
+Login</strong></li>
+<li>If a network-wide slug is set, it takes priority</li>
+<li>Sites will see a notice indicating network-wide settings are
+active</li>
+</ol>
+<h4 id="wp-cli-commands">WP-CLI Commands</h4>
+<p>Manage the plugin via command line with <strong>WP-CLI</strong>:</p>
+<h5 id="plugin-status">Plugin Status</h5>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Display current configuration and status</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login status</span></code></pre></div>
+<h5 id="login-slug-management">Login Slug Management</h5>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get current login slug</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login get-slug</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Set new login slug</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login set-slug my-secure-login</span></code></pre></div>
+<h5 id="ip-whitelist-management-1">IP Whitelist Management</h5>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List all whitelisted IPs</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login whitelist list</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Add IP to whitelist (supports CIDR)</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login whitelist add 192.168.1.100</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login whitelist add 192.168.1.0/24</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove IP from whitelist</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login whitelist remove 192.168.1.100</span></code></pre></div>
+<h5 id="blocked-ips-management">Blocked IPs Management</h5>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List currently blocked IPs</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login blocked list</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Clear all blocked IPs</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login blocked clear</span></code></pre></div>
+<h5 id="brute-force-protection-settings">Brute Force Protection
+Settings</h5>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set maximum login attempts (1-100)</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection max-attempts 10</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Set attempt tracking window in seconds (1-3600)</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection attempt-window 120</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Set block duration in seconds (1-86400)</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection block-duration 1800</span></code></pre></div>
+<h5 id="database-cleanup">Database Cleanup</h5>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Manually cleanup expired login attempt data</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co"># (This also runs automatically once per day via WordPress Cron)</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login cleanup</span></code></pre></div>
+<hr />

@@ -1,0 +1,216 @@
+<h3 id="i-activated-the-plugin-but-cant-find-the-login-page">I activated
+the plugin but can’t find the login page!</h3>
+<p>The <strong>default login URL</strong> after activation is:</p>
+<pre><code>https://yourdomain.com/jpkcom-login/</code></pre>
+<p>If you changed the slug in the settings, use your custom URL
+instead.</p>
+<p><strong>Recovery Methods:</strong></p>
+<ol type="1">
+<li><p><strong>Check your admin bar</strong> (if still logged in) - go
+to Settings → Hide Login</p></li>
+<li><p><strong>Check your browser bookmarks</strong> for the saved login
+URL</p></li>
+<li><p><strong>Disable the plugin via FTP</strong> - rename the
+folder:</p>
+<pre><code>/wp-content/plugins/jpkcom-hide-login/</code></pre>
+<p>to</p>
+<pre><code>/wp-content/plugins/jpkcom-hide-login-disabled/</code></pre></li>
+<li><p><strong>Add emergency slug to wp-config.php</strong>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>(<span class="st">&#39;JPKCOM_HIDE_LOGIN_DEFAULT_SLUG&#39;</span><span class="ot">,</span> <span class="st">&#39;emergency-login&#39;</span>)<span class="ot">;</span></span></code></pre></div></li>
+</ol>
+<h3 id="im-locked-out-due-to-ip-blocking-how-do-i-recover">I’m locked
+out due to IP blocking! How do I recover?</h3>
+<p>If you’re blocked after too many failed login attempts:</p>
+<h4 id="method-1-wait-10-minutes">Method 1: Wait 10 Minutes</h4>
+<p>The block automatically expires after 10 minutes.</p>
+<h4 id="method-2-add-ip-to-whitelist-via-database">Method 2: Add IP to
+Whitelist via Database</h4>
+<p>Execute this SQL query in phpMyAdmin or your database tool:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">UPDATE</span> wp_options</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">SET</span> option_value <span class="op">=</span> <span class="st">&#39;[&quot;YOUR.IP.ADDRESS&quot;]&#39;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">WHERE</span> option_name <span class="op">=</span> <span class="st">&#39;jpkcom_hide_login_ip_whitelist&#39;</span>;</span></code></pre></div>
+<p>Replace <code>YOUR.IP.ADDRESS</code> with your actual IP address.</p>
+<h4 id="method-3-clear-all-blocks-via-database">Method 3: Clear All
+Blocks via Database</h4>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">DELETE</span> <span class="kw">FROM</span> wp_options</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">WHERE</span> option_name <span class="op">=</span> <span class="st">&#39;jpkcom_hide_login_blocked_ips&#39;</span>;</span></code></pre></div>
+<h3 id="can-i-use-this-plugin-on-multisite">Can I use this plugin on
+Multisite?</h3>
+<p><strong>Yes!</strong> The plugin fully supports WordPress Multisite
+with two configuration modes:</p>
+<ol type="1">
+<li><strong>Network-wide slug</strong> - Set one login URL for all
+sites</li>
+<li><strong>Per-site slugs</strong> - Let each site administrator set
+their own custom slug</li>
+</ol>
+<p>Network administrators can access network settings at:
+<strong>Network Admin → Settings → Hide Login (Network)</strong></p>
+<h3 id="what-happens-if-someone-tries-to-access-wp-login.php">What
+happens if someone tries to access wp-login.php?</h3>
+<p>They receive a <strong>404 Not Found</strong> error with no
+indication that the login page exists elsewhere. This provides better
+security than redirecting or showing a 403 error.</p>
+<p>After <strong>5 attempts within 60 seconds</strong>, the IP is
+blocked for <strong>10 minutes</strong> with no further access to the
+site.</p>
+<h3 id="does-this-affect-wordpress-rest-api-or-ajax">Does this affect
+WordPress REST API or AJAX?</h3>
+<p><strong>No.</strong> The plugin intelligently detects and allows:</p>
+<ul>
+<li>WordPress REST API requests</li>
+<li>Admin AJAX calls (<code>admin-ajax.php</code>)</li>
+<li>WooCommerce AJAX requests</li>
+<li>Other legitimate background requests</li>
+</ul>
+<p>Only direct browser access to <code>wp-login.php</code> and
+<code>wp-admin</code> is blocked for non-logged-in users.</p>
+<h3 id="is-it-compatible-with-woocommerce">Is it compatible with
+WooCommerce?</h3>
+<p><strong>Yes!</strong> The plugin includes special compatibility for
+WooCommerce:</p>
+<ul>
+<li>My Account login forms work correctly</li>
+<li>Login/logout redirects are properly handled</li>
+<li>Checkout login is not affected</li>
+<li>WooCommerce AJAX requests are never blocked</li>
+</ul>
+<h3 id="can-i-customize-the-number-of-attempts-or-block-duration">Can I
+customize the number of attempts or block duration?</h3>
+<p><strong>Yes!</strong> All brute force protection thresholds are fully
+customizable:</p>
+<p>Navigate to <strong>Settings → Hide Login</strong> and scroll to
+<strong>Brute Force Protection Settings</strong> to configure:</p>
+<ul>
+<li><strong>Maximum Login Attempts</strong> (1-100) - Default: 5</li>
+<li><strong>Attempt Window</strong> (1-3600 seconds) - Default: 60
+seconds</li>
+<li><strong>Block Duration</strong> (1-86400 seconds / 24 hours) -
+Default: 600 seconds (10 minutes)</li>
+</ul>
+<p>You can also configure these settings via WP-CLI:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection max-attempts 10</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection attempt-window 120</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection block-duration 1800</span></code></pre></div>
+<h3 id="does-this-plugin-modify-core-wordpress-files">Does this plugin
+modify core WordPress files?</h3>
+<p><strong>No.</strong> The plugin uses only WordPress hooks and
+filters. It does not modify: - <code>wp-login.php</code> -
+<code>wp-admin</code> files - Core WordPress files</p>
+<p>This means WordPress updates are completely safe and won’t break the
+plugin.</p>
+<h3 id="can-i-override-default-values-in-wp-config.php">Can I override
+default values in wp-config.php?</h3>
+<p><strong>Yes!</strong> Add these constants to
+<code>wp-config.php</code> (before
+<code>/* That's all, stop editing! */</code>):</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom default login slug</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_DEFAULT_SLUG&#39;</span><span class="ot">,</span> <span class="st">&#39;my-secret-login&#39;</span> )<span class="ot">;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom option name for per-site slug</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_OPTION&#39;</span><span class="ot">,</span> <span class="st">&#39;my_custom_login_slug&#39;</span> )<span class="ot">;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom option name for network slug (Multisite)</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_NETWORK_OPTION&#39;</span><span class="ot">,</span> <span class="st">&#39;my_network_login_slug&#39;</span> )<span class="ot">;</span></span></code></pre></div>
+<h3 id="will-this-affect-password-reset-emails">Will this affect
+password reset emails?</h3>
+<p><strong>No.</strong> Password reset emails automatically use the
+custom login URL. When users click the reset link, they’re redirected to
+your custom slug with the reset token intact.</p>
+<h3 id="can-i-use-this-with-other-security-plugins">Can I use this with
+other security plugins?</h3>
+<p><strong>Generally yes</strong>, but avoid using multiple plugins
+that: - Also hide the login URL (conflict) - Implement their own brute
+force protection (may interfere)</p>
+<p>Compatible with: - Wordfence (disable Login Security features) -
+Sucuri Security - iThemes Security (disable Login URL changing) - All in
+One WP Security (disable Login Page changing)</p>
+<hr />
+<h3 id="troubleshooting">Troubleshooting</h3>
+<h4 id="login-page-shows-a-white-screen">Login page shows a white
+screen</h4>
+<p>This usually means there’s a PHP error. Check your error logs:</p>
+<ol type="1">
+<li><p>Enable debugging in <code>wp-config.php</code>:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG&#39;</span><span class="ot">,</span> <span class="kw">true</span> )<span class="ot">;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG_LOG&#39;</span><span class="ot">,</span> <span class="kw">true</span> )<span class="ot">;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG_DISPLAY&#39;</span><span class="ot">,</span> <span class="kw">false</span> )<span class="ot">;</span></span></code></pre></div></li>
+<li><p>Check <code>/wp-content/debug.log</code> for errors</p></li>
+<li><p>Report any errors to the plugin support</p></li>
+</ol>
+<h4 id="settings-page-doesnt-save-changes">Settings page doesn’t save
+changes</h4>
+<ol type="1">
+<li>Check that you have <code>manage_options</code> capability</li>
+<li>Verify the slug doesn’t conflict with existing pages</li>
+<li>Check for JavaScript errors in browser console</li>
+<li>Temporarily disable other plugins to identify conflicts</li>
+</ol>
+<h4 id="logged-in-but-still-see-404-on-wp-admin">Logged in but still see
+404 on wp-admin</h4>
+<p>This shouldn’t happen. Possible causes:</p>
+<ol type="1">
+<li>Browser cache - Clear your browser cache and cookies</li>
+<li>Plugin conflict - Temporarily disable other security plugins</li>
+<li>Permalink structure - Go to <strong>Settings → Permalinks</strong>
+and click <strong>Save Changes</strong></li>
+</ol>
+<h4 id="after-logout-redirected-to-404-page">After logout, redirected to
+404 page</h4>
+<p>The logout redirect should automatically use the custom login URL. If
+not:</p>
+<ol type="1">
+<li>Check if any other plugin is filtering
+<code>logout_redirect</code></li>
+<li>Temporarily disable other plugins</li>
+<li>Report the issue with details about your WordPress version and
+active plugins</li>
+</ol>
+<hr />
+<h3 id="technical-details">Technical Details</h3>
+<h4 id="architecture">Architecture</h4>
+<p>The plugin uses a modular, object-oriented architecture:</p>
+<pre><code>jpkcom-hide-login/
+├── jpkcom-hide-login.php          # Bootstrap &amp; initialization
+└── includes/
+    ├── class-ip-manager.php       # IP whitelist/blocklist management
+    ├── class-login-protection.php # Brute force protection
+    ├── class-mask-login.php       # Login URL masking
+    ├── class-admin-settings.php   # Admin interface
+    └── class-plugin-updater.php   # GitHub-based updates</code></pre>
+<h4 id="database-usage">Database Usage</h4>
+<p>The plugin uses WordPress options and transients:</p>
+<p><strong>Options:</strong> - <code>jpkcom_hide_login_slug</code> -
+Per-site custom slug - <code>jpkcom_hide_login_network_slug</code> -
+Network-wide slug (Multisite) -
+<code>jpkcom_hide_login_ip_whitelist</code> - Array of whitelisted IPs -
+<code>jpkcom_hide_login_notice_shown</code> - First-time activation
+notice flag</p>
+<p><strong>Transients:</strong> -
+<code>jpkcom_hide_login_blocked_ips</code> - Currently blocked IP list
+with expiration - <code>jpkcom_hide_login_attempts_{hash}</code> -
+Failed login attempt counters per IP</p>
+<p><strong>Automatic Cleanup:</strong> - Expired login attempt
+transients are automatically cleaned up daily via WordPress Cron -
+Manual cleanup available via WP-CLI:
+<code>wp jpkcom-hide-login cleanup</code> - All data is removed on
+plugin deactivation</p>
+<h4 id="php-requirements">PHP Requirements</h4>
+<ul>
+<li><strong>PHP 8.3+</strong></li>
+</ul>
+<h4 id="wordpress-compatibility">WordPress Compatibility</h4>
+<ul>
+<li><strong>WordPress 6.8+</strong> - Tested with latest WordPress
+versions</li>
+<li><strong>Multisite</strong> - Full support for network
+activation</li>
+<li><strong>WooCommerce</strong> - Compatible with WooCommerce 8.0+</li>
+</ul>
+<hr />

@@ -1,0 +1,60 @@
+<p><strong>JPKCom Hide Login</strong> is a security plugin that allows
+you to completely hide your WordPress login page by replacing the
+default <code>wp-login.php</code> URL with a custom slug of your choice.
+This significantly improves your site’s security by preventing automated
+bot attacks and brute force attempts on the default login URL.</p>
+<h3 id="key-features">Key Features</h3>
+<ul>
+<li><strong>Custom Login URL</strong> - Replace
+<code>wp-login.php</code> with any custom slug (e.g.,
+<code>/secure-login/</code>)</li>
+<li><strong>Brute Force Protection</strong> - Automatically block IPs
+after failed login attempts with customizable thresholds</li>
+<li><strong>Customizable Security Thresholds</strong> - Configure max
+attempts, attempt window, and block duration</li>
+<li><strong>IP Whitelist Management</strong> - Add trusted IPs that will
+never be blocked (supports CIDR ranges)</li>
+<li><strong>WP-CLI Support</strong> - Full command-line management via
+WP-CLI commands</li>
+<li><strong>WordPress Multisite Support</strong> - Network-wide settings
+for all sites or per-site configuration</li>
+<li><strong>WooCommerce Compatible</strong> - Works seamlessly with
+WooCommerce login/logout</li>
+<li><strong>REST API Safe</strong> - Does not interfere with REST API or
+AJAX requests</li>
+<li><strong>No Core File Modifications</strong> - Uses only WordPress
+filters and hooks</li>
+<li><strong>Fully Translatable</strong> - Ready for translation (Text
+Domain: <code>jpkcom-hide-login</code>)</li>
+<li><strong>Clean Uninstall</strong> - Completely reversible, no
+database pollution</li>
+</ul>
+<h3 id="how-it-works">How It Works</h3>
+<p>Once activated, the plugin:</p>
+<ol type="1">
+<li><strong>Blocks all direct access</strong> to
+<code>wp-login.php</code> and <code>wp-admin</code> for non-logged-in
+users with a 404 response</li>
+<li><strong>Creates a custom login URL</strong> (default:
+<code>/jpkcom-login/</code>) that serves the WordPress login page</li>
+<li><strong>Tracks failed login attempts</strong> and automatically
+blocks IPs after threshold is reached</li>
+<li><strong>Allows whitelisting of trusted IPs</strong> to prevent
+legitimate users from being blocked</li>
+<li><strong>Provides a comprehensive admin interface</strong> for
+managing all settings and viewing blocked IPs</li>
+</ol>
+<h3 id="security-benefits">Security Benefits</h3>
+<ul>
+<li><strong>Protects against automated attacks</strong> - Bots scanning
+for <code>/wp-login.php</code> will receive a 404 error</li>
+<li><strong>Prevents brute force attacks</strong> - Automatic IP
+blocking after multiple failed attempts</li>
+<li><strong>Reduces server load</strong> - Fewer malicious requests
+reaching your login page</li>
+<li><strong>Customizable security</strong> - Whitelist your own IPs for
+safe administration</li>
+<li><strong>No information disclosure</strong> - Blocked requests
+receive generic 404 responses</li>
+</ul>
+<hr />
