@@ -3,7 +3,7 @@
 Plugin Name: JPKCom Hide Login
 Plugin URI: https://github.com/JPKCom/jpkcom-hide-login
 Description: Rename the default WordPress login URL (wp-login.php) to a custom slug for enhanced security. Includes brute force protection and IP whitelist management.
-Version: 1.2.0
+Version: 1.2.1
 Author: Jean Pierre Kolb <jpk@jpkc.com>
 Author URI: https://www.jpkc.com/
 Contributors: JPKCom
@@ -12,7 +12,7 @@ Requires at least: 6.8
 Tested up to: 6.9
 Requires PHP: 8.3
 Network: true
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPL-2.0+
 License URI: http://www.gnu.org/licenses/gpl-2.0.txt
 Text Domain: jpkcom-hide-login
@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Plugin Constants
  */
 if ( ! defined( 'JPKCOM_HIDE_LOGIN_VERSION' ) ) {
-	define( 'JPKCOM_HIDE_LOGIN_VERSION', '1.2.0' );
+	define( 'JPKCOM_HIDE_LOGIN_VERSION', '1.2.1' );
 }
 
 if ( ! defined( 'JPKCOM_HIDE_LOGIN_OPTION' ) ) {
