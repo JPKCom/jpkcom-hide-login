@@ -5,7 +5,7 @@ https://github.com/JPKCom/jpkcom-hide-login<br />
 <strong>Description:</strong> Rename the WordPress login URL to a custom
 slug for enhanced security. Includes brute force protection and IP
 whitelist management.<br />
-<strong>Version:</strong> 1.2.1<br />
+<strong>Version:</strong> 1.2.2<br />
 <strong>Author:</strong> Jean Pierre Kolb <a href="mailto:jpk@jpkc.com"
 class="email">jpk@jpkc.com</a><br />
 <strong>Author URI:</strong> https://www.jpkc.com/<br />
@@ -16,7 +16,7 @@ Login, Custom Login URL<br />
 <strong>Tested up to:</strong> 6.9<br />
 <strong>Requires PHP:</strong> 8.3<br />
 <strong>Network:</strong> true<br />
-<strong>Stable tag:</strong> 1.2.1<br />
+<strong>Stable tag:</strong> 1.2.2<br />
 <strong>License:</strong> GPL-2.0+<br />
 <strong>License URI:</strong>
 http://www.gnu.org/licenses/gpl-2.0.txt<br />
@@ -450,7 +450,24 @@ activation</li>
 </ul>
 <hr />
 <h2 id="changelog">Changelog</h2>
-<h3 id="section">1.2.1 (2026-03-13)</h3>
+<h3 id="section">1.2.2 (2026-06-16)</h3>
+<ul>
+<li>Security: updater prefers an exact match against the manifest
+<code>download_url</code> over the slug heuristic, so a tampered
+manifest can no longer bypass the checksum gate</li>
+<li>Security: timing-safe checksum comparison
+(<code>hash_equals()</code>) with an <code>is_string()</code> guard
+against <code>hash_file()</code> failures</li>
+<li>Security: manifest fetch via <code>wp_safe_remote_get()</code> (SSRF
+defense-in-depth)</li>
+<li>Fixed PHP warning and missing contributor names in the plugin detail
+popup (<code>display_name</code> now provided)</li>
+<li>Fixed PHP warning/deprecation on <code>wp plugin list</code> by
+completing the <code>no_update</code> transient entry
+(<code>new_version</code>, <code>package</code>, <code>tested</code>,
+<code>requires_php</code>)</li>
+</ul>
+<h3 id="section-1">1.2.1 (2026-03-13)</h3>
 <h4 id="fixed">Fixed</h4>
 <ul>
 <li><strong>ZIP-Upload Fix</strong> - Manual ZIP uploads via WP-Admin no
@@ -459,7 +476,7 @@ longer fail with “invalid URL” error during checksum verification</li>
 creates ZIP with top-level plugin folder, ensuring WordPress correctly
 recognizes updates</li>
 </ul>
-<h3 id="section-1">1.2.0 (2025-11-12)</h3>
+<h3 id="section-2">1.2.0 (2025-11-12)</h3>
 <h4 id="added">Added</h4>
 <ul>
 <li><strong>IP Whitelist Management</strong> - Add trusted IPs that will
@@ -488,7 +505,7 @@ via <code>wp jpkcom-hide-login cleanup</code></li>
 management for all plugin features</li>
 </ul>
 <p>…</p>
-<h3 id="section-2">1.0.0 (2024-11-30)</h3>
+<h3 id="section-3">1.0.0 (2024-11-30)</h3>
 <ul>
 <li>Initial Release</li>
 <li>Basic login URL masking</li>
