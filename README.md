@@ -3,7 +3,7 @@
 **Plugin Name:** JPKCom Hide Login  
 **Plugin URI:** https://github.com/JPKCom/jpkcom-hide-login  
 **Description:** Rename the WordPress login URL to a custom slug for enhanced security. Includes brute force protection and IP whitelist management.  
-**Version:** 1.2.4  
+**Version:** 1.2.5  
 **Author:** Jean Pierre Kolb <jpk@jpkc.com>  
 **Author URI:** https://www.jpkc.com/  
 **Contributors:** JPKCom  
@@ -12,7 +12,7 @@
 **Tested up to:** 7.0  
 **Requires PHP:** 8.3  
 **Network:** true  
-**Stable tag:** 1.2.4  
+**Stable tag:** 1.2.5  
 **License:** GPL-2.0-or-later  
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html  
 **Text Domain:** jpkcom-hide-login  
@@ -454,6 +454,15 @@ The plugin uses WordPress options and transients:
 ---
 
 ## Changelog
+
+### 1.2.5
+* **Security:** the client IP is now taken from `REMOTE_ADDR`; `X-Forwarded-For`, `CF-Connecting-IP` and `X-Real-IP` are only believed when the request arrives from a proxy declared via `JPKCOM_HIDE_LOGIN_TRUSTED_PROXIES` or the `jpkcom_hide_login_trusted_proxies` filter. Previously a single spoofed header made the plugin see a whitelisted address, which disabled both the wp-login.php block and the brute-force protection, and allowed an attacker to get someone else's address blocked
+* **Security:** the wp-login.php / wp-signup.php block no longer relies on a substring test against the raw request URI. `//wp-login.php` and `/wp-%6cogin.php` bypassed it; matching is now done against the script the server actually resolved, plus a normalised (decoded, slash-collapsed) path
+* **Security:** redirects only reveal the custom slug while the masked login page is being served or for an authenticated request — an anonymous probe no longer receives it in the `Location` header
+* **Fixed:** the wp-admin block matched any path containing "wp-admin", so a post with a slug such as `/my-wp-admin-guide/` returned 404 for every visitor. It now matches the first path segment
+* **Fixed:** CIDR whitelist entries never matched IPv6 addresses because `ip2long()` returns false for them, while the admin UI happily accepted IPv6 ranges. Matching now works for both families via `inet_pton()`, and the prefix ceiling depends on the family (/128 vs /32)
+* **Changed:** IP keys are derived with a salted `hash_hmac( 'sha256', … , wp_salt( 'auth' ) )` instead of a bare `md5()`, which was reversible for IPv4 in seconds. Existing attempt counters and blocks are invalidated once on upgrade
+* **Added:** `tests/test-security.php` — regression tests for every issue above, each written to fail against the previous implementation. Run in CI on every pull request
 
 ### 1.2.4
 * Security: update packages are now verified *before* installation — the verified file is handed to WordPress instead of being downloaded a second time, so the bytes that were checked are the bytes that get installed

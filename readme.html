@@ -5,7 +5,7 @@ https://github.com/JPKCom/jpkcom-hide-login<br />
 <strong>Description:</strong> Rename the WordPress login URL to a custom
 slug for enhanced security. Includes brute force protection and IP
 whitelist management.<br />
-<strong>Version:</strong> 1.2.4<br />
+<strong>Version:</strong> 1.2.5<br />
 <strong>Author:</strong> Jean Pierre Kolb <a href="mailto:jpk@jpkc.com"
 class="email">jpk@jpkc.com</a><br />
 <strong>Author URI:</strong> https://www.jpkc.com/<br />
@@ -16,7 +16,7 @@ Login, Custom Login URL<br />
 <strong>Tested up to:</strong> 7.0<br />
 <strong>Requires PHP:</strong> 8.3<br />
 <strong>Network:</strong> true<br />
-<strong>Stable tag:</strong> 1.2.4<br />
+<strong>Stable tag:</strong> 1.2.5<br />
 <strong>License:</strong> GPL-2.0-or-later<br />
 <strong>License URI:</strong>
 https://www.gnu.org/licenses/gpl-2.0.html<br />
@@ -450,7 +450,45 @@ activation</li>
 </ul>
 <hr />
 <h2 id="changelog">Changelog</h2>
-<h3 id="section">1.2.4</h3>
+<h3 id="section">1.2.5</h3>
+<ul>
+<li><strong>Security:</strong> the client IP is now taken from
+<code>REMOTE_ADDR</code>; <code>X-Forwarded-For</code>,
+<code>CF-Connecting-IP</code> and <code>X-Real-IP</code> are only
+believed when the request arrives from a proxy declared via
+<code>JPKCOM_HIDE_LOGIN_TRUSTED_PROXIES</code> or the
+<code>jpkcom_hide_login_trusted_proxies</code> filter. Previously a
+single spoofed header made the plugin see a whitelisted address, which
+disabled both the wp-login.php block and the brute-force protection, and
+allowed an attacker to get someone else’s address blocked</li>
+<li><strong>Security:</strong> the wp-login.php / wp-signup.php block no
+longer relies on a substring test against the raw request URI.
+<code>//wp-login.php</code> and <code>/wp-%6cogin.php</code> bypassed
+it; matching is now done against the script the server actually
+resolved, plus a normalised (decoded, slash-collapsed) path</li>
+<li><strong>Security:</strong> redirects only reveal the custom slug
+while the masked login page is being served or for an authenticated
+request — an anonymous probe no longer receives it in the
+<code>Location</code> header</li>
+<li><strong>Fixed:</strong> the wp-admin block matched any path
+containing “wp-admin”, so a post with a slug such as
+<code>/my-wp-admin-guide/</code> returned 404 for every visitor. It now
+matches the first path segment</li>
+<li><strong>Fixed:</strong> CIDR whitelist entries never matched IPv6
+addresses because <code>ip2long()</code> returns false for them, while
+the admin UI happily accepted IPv6 ranges. Matching now works for both
+families via <code>inet_pton()</code>, and the prefix ceiling depends on
+the family (/128 vs /32)</li>
+<li><strong>Changed:</strong> IP keys are derived with a salted
+<code>hash_hmac( 'sha256', … , wp_salt( 'auth' ) )</code> instead of a
+bare <code>md5()</code>, which was reversible for IPv4 in seconds.
+Existing attempt counters and blocks are invalidated once on
+upgrade</li>
+<li><strong>Added:</strong> <code>tests/test-security.php</code> —
+regression tests for every issue above, each written to fail against the
+previous implementation. Run in CI on every pull request</li>
+</ul>
+<h3 id="section-1">1.2.4</h3>
 <ul>
 <li>Security: update packages are now verified <em>before</em>
 installation — the verified file is handed to WordPress instead of being
@@ -475,14 +513,14 @@ instead of being retried on every admin request</li>
 <li>Added: CI workflow on every pull request (PHP lint, named-argument
 check, YAML validation, action-pinning guard)</li>
 </ul>
-<h3 id="section-1">1.2.3 (2026-06-16)</h3>
+<h3 id="section-2">1.2.3 (2026-06-16)</h3>
 <ul>
 <li>Raised the minimum WordPress version to 6.9 and “Tested up to” to
 WordPress 7.0</li>
 <li>Switched license metadata to the SPDX identifier
 <code>GPL-2.0-or-later</code> with the HTTPS license URI</li>
 </ul>
-<h3 id="section-2">1.2.2 (2026-06-16)</h3>
+<h3 id="section-3">1.2.2 (2026-06-16)</h3>
 <ul>
 <li>Security: updater prefers an exact match against the manifest
 <code>download_url</code> over the slug heuristic, so a tampered
@@ -499,7 +537,7 @@ completing the <code>no_update</code> transient entry
 (<code>new_version</code>, <code>package</code>, <code>tested</code>,
 <code>requires_php</code>)</li>
 </ul>
-<h3 id="section-3">1.2.1 (2026-03-13)</h3>
+<h3 id="section-4">1.2.1 (2026-03-13)</h3>
 <h4 id="fixed">Fixed</h4>
 <ul>
 <li><strong>ZIP-Upload Fix</strong> - Manual ZIP uploads via WP-Admin no
@@ -508,7 +546,7 @@ longer fail with “invalid URL” error during checksum verification</li>
 creates ZIP with top-level plugin folder, ensuring WordPress correctly
 recognizes updates</li>
 </ul>
-<h3 id="section-4">1.2.0 (2025-11-12)</h3>
+<h3 id="section-5">1.2.0 (2025-11-12)</h3>
 <h4 id="added">Added</h4>
 <ul>
 <li><strong>IP Whitelist Management</strong> - Add trusted IPs that will
@@ -537,7 +575,7 @@ via <code>wp jpkcom-hide-login cleanup</code></li>
 management for all plugin features</li>
 </ul>
 <p>…</p>
-<h3 id="section-5">1.0.0 (2024-11-30)</h3>
+<h3 id="section-6">1.0.0 (2024-11-30)</h3>
 <ul>
 <li>Initial Release</li>
 <li>Basic login URL masking</li>
