@@ -46,7 +46,7 @@ jpkcom-hide-login/
 - Multisite network admin menu and settings page (lines 260-344)
 
 **Constants:**
-- `JPKCOM_HIDE_LOGIN_VERSION` - Plugin version (1.2.4)
+- `JPKCOM_HIDE_LOGIN_VERSION` - Plugin version (1.2.5)
 - `JPKCOM_HIDE_LOGIN_OPTION` - Per-site option name
 - `JPKCOM_HIDE_LOGIN_DEFAULT_SLUG` - Default slug ('jpkcom-login')
 - `JPKCOM_HIDE_LOGIN_NETWORK_OPTION` - Network option name (Multisite)
@@ -79,9 +79,29 @@ jpkcom-hide-login/
 - Whitelist: WordPress option `jpkcom_hide_login_ip_whitelist` (persistent)
 - Blocklist: WordPress transient `jpkcom_hide_login_blocked_ips` (TTL-based)
 
-**Privacy:**
-- IP addresses are hashed with MD5 for storage privacy
-- Original IPs stored in transient for display purposes only
+**Client IP determination — read this before touching `get_current_ip()`:**
+
+Only `REMOTE_ADDR` is authoritative. `X-Forwarded-For`, `CF-Connecting-IP` and `X-Real-IP` are ordinary request headers that **any client can set**, so they are consulted *only* when `REMOTE_ADDR` itself matches a declared trusted proxy.
+
+Until 1.2.4 those headers were read unconditionally and preferred over `REMOTE_ADDR`. A single `X-Forwarded-For: 127.0.0.1` therefore made the plugin see a whitelisted address, which disabled the wp-login.php block **and** the brute-force protection, and let an attacker get someone else's address blocked. Do not reintroduce a header-first lookup.
+
+Trusted proxies are opt-in and empty by default:
+
+```php
+// wp-config.php — e.g. Cloudflare ranges
+define( 'JPKCOM_HIDE_LOGIN_TRUSTED_PROXIES', '173.245.48.0/20, 2400:cb00::/32' );
+```
+
+```php
+add_filter( 'jpkcom_hide_login_trusted_proxies', fn() => [ '10.0.0.0/8' ] );
+```
+
+For `X-Forwarded-For` the chain is walked **right to left**, stopping at the first entry that is not itself a trusted proxy — the left-hand entries are attacker-supplied and must never win.
+
+**Privacy — what the hashing does and does not do:**
+- Keys are derived with `hash_hmac( 'sha256', $ip, wp_salt( 'auth' ) )`, not `md5( $ip )`. A bare MD5 of an IPv4 address is reversible by walking all 2^32 candidates in seconds, so it was neither private nor unguessable.
+- The **block list deliberately stores the plain address** alongside the key so the admin screen can show it. That record is therefore *not* anonymised — do not describe it as such.
+- The **attempt counter** stores no address at all; there the salted key is the only trace, which is where the salt genuinely buys something.
 
 #### 3. Login Protection (includes/class-login-protection.php)
 
@@ -240,9 +260,20 @@ The function `jpkcom_hide_login_get_slug()` resolves slugs with this priority:
 ### Security Considerations
 
 **IP Privacy:**
-- IP addresses are hashed with MD5 before storage in attempt counters
-- Original IPs stored in transient data for display (with automatic expiration)
-- No plain IP addresses in persistent database storage
+- Attempt-counter keys are derived with `hash_hmac( 'sha256', $ip, wp_salt( 'auth' ) )`; that transient stores no address, so the key is the only trace
+- The block list stores the plain address on purpose so the admin screen can display it — that record is not anonymised
+- No plain IP addresses in persistent (autoloaded option) storage; both stores are expiring transients
+
+**Request-path matching:**
+- Never match core scripts with `str_contains()` against `REQUEST_URI` or `wp_parse_url()`'s path. `//wp-login.php` makes `parse_url()` read `wp-login.php` as the *host* and return an empty path, and `/wp-%6cogin.php` never matches an undecoded comparison — both bypassed the block until 1.2.4.
+- `get_request_path()` strips the query manually, `rawurldecode()`s and collapses repeated slashes; `get_script_path()` reports what the server actually resolved (`SCRIPT_NAME`), which is the authoritative signal.
+- wp-admin is matched on the **first path segment**, not as a substring: `/my-wp-admin-guide/` used to 404 for every visitor.
+
+**Slug disclosure:**
+- `filter_wp_redirect()` rewrites `wp-login.php` to the custom slug only while serving the masked login page or for an authenticated request. An anonymous probe that provokes such a redirect must not receive the secret slug in the `Location` header.
+
+**Regression tests:**
+- `tests/test-security.php` covers all of the above and is written so each case fails against the pre-1.2.5 implementation. Run with `php tests/test-security.php`; CI runs it on every pull request. `tests/` is excluded from the release ZIP.
 
 **Transient Expiration & Cleanup:**
 - Blocked IPs automatically expire via WordPress transients

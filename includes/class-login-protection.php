@@ -252,7 +252,12 @@ class JPKCom_Hide_Login_Login_Protection {
 	 * @return string Transient key.
 	 */
 	private function get_attempt_key( string $ip ): string {
-		return 'jpkcom_hide_login_attempts_' . md5( $ip );
+		// Unlike the block list, the attempt counter never stores the address
+		// itself - this key is the only trace of it. A bare md5() would be
+		// trivially reversible for IPv4, so derive it with the site salt.
+		// Transient names are capped at 172 characters; a 64-char hex digest
+		// plus this prefix stays well inside that.
+		return 'jpkcom_hide_login_attempts_' . hash_hmac( 'sha256', $ip, wp_salt( 'auth' ) );
 	}
 
 	/**

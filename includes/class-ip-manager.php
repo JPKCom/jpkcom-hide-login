@@ -38,37 +38,134 @@ class JPKCom_Hide_Login_IP_Manager {
 	/**
 	 * Get the current user's IP address.
 	 *
+	 * Only `REMOTE_ADDR` is authoritative. Proxy headers such as
+	 * `X-Forwarded-For` or `CF-Connecting-IP` are plain request headers that any
+	 * client can set, so they are consulted *only* when the request actually
+	 * reaches us from a proxy that has been declared trustworthy.
+	 *
+	 * Earlier versions read those headers unconditionally and preferred them
+	 * over `REMOTE_ADDR`. A single `X-Forwarded-For: 127.0.0.1` therefore made
+	 * this method report a whitelisted address, which disabled both the
+	 * wp-login.php block and the brute-force protection, and allowed an attacker
+	 * to get somebody else's address blocked.
+	 *
+	 * Trusted proxies are opt-in via the `JPKCOM_HIDE_LOGIN_TRUSTED_PROXIES`
+	 * constant or the `jpkcom_hide_login_trusted_proxies` filter; with no
+	 * configuration nothing but `REMOTE_ADDR` is believed.
+	 *
+	 * @since 1.2.5 Proxy headers require a trusted proxy.
+	 *
 	 * @return string IP address or 'unknown' if not available.
 	 */
 	public function get_current_ip(): string {
-		$ip = '';
+		$remote = isset( $_SERVER['REMOTE_ADDR'] )
+			? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) )
+			: '';
 
-		// Check for proxied IP addresses.
-		$headers = [
-			'HTTP_CF_CONNECTING_IP', // Cloudflare
-			'HTTP_X_FORWARDED_FOR',
-			'HTTP_X_REAL_IP',
-			'REMOTE_ADDR',
-		];
+		if ( false === filter_var( $remote, FILTER_VALIDATE_IP ) ) {
+			return 'unknown';
+		}
 
-		foreach ( $headers as $header ) {
-			if ( ! empty( $_SERVER[ $header ] ) ) {
-				$ip = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
-				// For X-Forwarded-For, take the first IP.
-				if ( str_contains( $ip, ',' ) ) {
-					$ips = explode( ',', $ip );
-					$ip  = trim( $ips[0] );
-				}
-				break;
+		$trusted = $this->get_trusted_proxies();
+
+		if ( empty( $trusted ) || ! $this->is_ip_in_list( $remote, $trusted ) ) {
+			return $remote;
+		}
+
+		// Cloudflare sets this to the originating client and overwrites anything
+		// the client sent, so it is a single trustworthy value behind CF.
+		if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+			$candidate = trim( sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) );
+
+			if ( filter_var( $candidate, FILTER_VALIDATE_IP ) ) {
+				return $candidate;
 			}
 		}
 
-		// Validate IP address.
-		if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
-			return $ip;
+		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+			$forwarded = sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) );
+
+			// The chain is client, proxy1, proxy2 ... - only the entries appended
+			// by our own trusted proxies can be believed. Walk from the right and
+			// stop at the first address that is not itself a trusted proxy; the
+			// left-hand entries are attacker-supplied.
+			$chain = array_reverse( array_map( 'trim', explode( ',', $forwarded ) ) );
+
+			foreach ( $chain as $candidate ) {
+				if ( false === filter_var( $candidate, FILTER_VALIDATE_IP ) ) {
+					break;
+				}
+
+				if ( ! $this->is_ip_in_list( $candidate, $trusted ) ) {
+					return $candidate;
+				}
+			}
 		}
 
-		return 'unknown';
+		if ( ! empty( $_SERVER['HTTP_X_REAL_IP'] ) ) {
+			$candidate = trim( sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_REAL_IP'] ) ) );
+
+			if ( filter_var( $candidate, FILTER_VALIDATE_IP ) ) {
+				return $candidate;
+			}
+		}
+
+		return $remote;
+	}
+
+	/**
+	 * Get the list of proxies whose forwarding headers may be believed.
+	 *
+	 * Empty by default: without an explicit declaration no proxy header is
+	 * trusted, which is the safe behaviour for a site that is reached directly.
+	 *
+	 * Configure via `define( 'JPKCOM_HIDE_LOGIN_TRUSTED_PROXIES', '173.245.48.0/20, 2400:cb00::/32' );`
+	 * or the `jpkcom_hide_login_trusted_proxies` filter. Entries may be single
+	 * addresses or CIDR ranges, IPv4 or IPv6.
+	 *
+	 * @since 1.2.5
+	 *
+	 * @return array List of IP addresses / CIDR ranges.
+	 */
+	public function get_trusted_proxies(): array {
+		$proxies = [];
+
+		if ( defined( 'JPKCOM_HIDE_LOGIN_TRUSTED_PROXIES' ) ) {
+			$configured = constant( 'JPKCOM_HIDE_LOGIN_TRUSTED_PROXIES' );
+
+			if ( is_string( $configured ) ) {
+				$configured = explode( ',', $configured );
+			}
+
+			if ( is_array( $configured ) ) {
+				$proxies = $configured;
+			}
+		}
+
+		/**
+		 * Filters the proxies whose forwarding headers are trusted.
+		 *
+		 * @since 1.2.5
+		 *
+		 * @param array $proxies List of IP addresses / CIDR ranges.
+		 */
+		$proxies = apply_filters( 'jpkcom_hide_login_trusted_proxies', $proxies );
+
+		if ( ! is_array( $proxies ) ) {
+			return [];
+		}
+
+		$clean = [];
+
+		foreach ( $proxies as $entry ) {
+			$entry = trim( (string) $entry );
+
+			if ( '' !== $entry && $this->validate_ip_or_range( $entry ) ) {
+				$clean[] = $entry;
+			}
+		}
+
+		return $clean;
 	}
 
 	/**
@@ -346,15 +443,53 @@ class JPKCom_Hide_Login_IP_Manager {
 
 		list( $subnet, $mask ) = explode( '/', $range, 2 );
 
-		$ip_long     = ip2long( $ip );
-		$subnet_long = ip2long( $subnet );
-		$mask_long   = -1 << ( 32 - (int) $mask );
+		$mask = trim( $mask );
 
-		if ( false === $ip_long || false === $subnet_long ) {
+		if ( '' === $mask || ! ctype_digit( $mask ) ) {
 			return false;
 		}
 
-		return ( $ip_long & $mask_long ) === ( $subnet_long & $mask_long );
+		// inet_pton handles both families and yields a fixed-width binary string:
+		// 4 bytes for IPv4, 16 for IPv6. The previous ip2long() implementation
+		// returned false for every IPv6 address, so IPv6 CIDR entries silently
+		// never matched even though the admin UI accepted them.
+		$ip_bin     = @inet_pton( $ip );
+		$subnet_bin = @inet_pton( trim( $subnet ) );
+
+		if ( false === $ip_bin || false === $subnet_bin ) {
+			return false;
+		}
+
+		// Never compare an IPv4 address against an IPv6 range or vice versa.
+		if ( strlen( $ip_bin ) !== strlen( $subnet_bin ) ) {
+			return false;
+		}
+
+		$bits = (int) $mask;
+		$max  = strlen( $ip_bin ) * 8;
+
+		if ( $bits > $max ) {
+			return false;
+		}
+
+		if ( 0 === $bits ) {
+			return true; // ::/0 and 0.0.0.0/0 match everything.
+		}
+
+		$full_bytes = intdiv( $bits, 8 );
+		$rest_bits  = $bits % 8;
+
+		if ( $full_bytes > 0 && substr( $ip_bin, 0, $full_bytes ) !== substr( $subnet_bin, 0, $full_bytes ) ) {
+			return false;
+		}
+
+		if ( 0 === $rest_bits ) {
+			return true;
+		}
+
+		$byte_mask = chr( ( 0xFF << ( 8 - $rest_bits ) ) & 0xFF );
+
+		return ( $ip_bin[ $full_bytes ] & $byte_mask ) === ( $subnet_bin[ $full_bytes ] & $byte_mask );
 	}
 
 	/**
@@ -369,13 +504,25 @@ class JPKCom_Hide_Login_IP_Manager {
 		if ( str_contains( $ip, '/' ) ) {
 			list( $subnet, $mask ) = explode( '/', $ip, 2 );
 
+			$subnet = trim( $subnet );
+			$mask   = trim( $mask );
+
 			if ( ! filter_var( $subnet, FILTER_VALIDATE_IP ) ) {
 				return false;
 			}
 
+			if ( '' === $mask || ! ctype_digit( $mask ) ) {
+				return false;
+			}
+
+			// The prefix ceiling depends on the family: /32 is a single host in
+			// IPv4 but a very large block in IPv6. Accepting up to /32 for both,
+			// as before, let the UI store IPv6 ranges that could never match.
+			$is_v6    = false !== filter_var( $subnet, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 );
+			$max_bits = $is_v6 ? 128 : 32;
 			$mask_int = (int) $mask;
 
-			return $mask_int >= 0 && $mask_int <= 32;
+			return $mask_int >= 0 && $mask_int <= $max_bits;
 		}
 
 		// Validate single IP.
@@ -383,14 +530,23 @@ class JPKCom_Hide_Login_IP_Manager {
 	}
 
 	/**
-	 * Hash an IP address for privacy.
+	 * Derive a stable, non-guessable key for an IP address.
+	 *
+	 * Note what this does and does not achieve: the block list stores the plain
+	 * address alongside the key so the admin screen can display it, so this is
+	 * not anonymisation. What the site salt does buy is that the key cannot be
+	 * recomputed without it - a plain `md5( $ip )` is reversible for IPv4 by
+	 * walking all 2^32 addresses in seconds, which makes it useless as a
+	 * privacy measure and as an unguessable identifier alike.
+	 *
+	 * @since 1.2.5 Salted HMAC instead of a bare MD5.
 	 *
 	 * @param string $ip IP address to hash.
 	 *
-	 * @return string MD5 hash of IP address.
+	 * @return string Keyed hash of the IP address.
 	 */
 	private function hash_ip( string $ip ): string {
-		return md5( $ip );
+		return hash_hmac( 'sha256', $ip, wp_salt( 'auth' ) );
 	}
 
 	/**

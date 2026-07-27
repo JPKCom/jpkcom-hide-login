@@ -37,6 +37,17 @@ class JPKCom_Hide_Login_Mask_Login {
 	private string $custom_slug;
 
 	/**
+	 * Whether the current request is the masked login page itself.
+	 *
+	 * Gates whether redirects may reveal the custom slug.
+	 *
+	 * @since 1.2.5
+	 *
+	 * @var bool
+	 */
+	private bool $is_custom_login_request = false;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param JPKCom_Hide_Login_IP_Manager $ip_manager   IP Manager instance.
@@ -116,12 +127,14 @@ class JPKCom_Hide_Login_Mask_Login {
 			return;
 		}
 
-		$request_uri  = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
-		$request_path = trim( (string) wp_parse_url( $request_uri, PHP_URL_PATH ), '/' );
+		$request_path = $this->get_request_path();
+		$segments     = '' === $request_path ? [] : explode( '/', $request_path );
+		$script_path  = $this->get_script_path();
+		$script       = basename( $script_path );
 		$ip           = $this->ip_manager->get_current_ip();
 
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[JPKCom Hide Login] handle_login_request - Request path: ' . $request_path . ' | Custom slug: ' . $this->custom_slug );
+			error_log( '[JPKCom Hide Login] handle_login_request - Request path: ' . $request_path . ' | Script: ' . $script_path . ' | Custom slug: ' . $this->custom_slug );
 		}
 
 		// Serve login page if custom slug is accessed.
@@ -129,20 +142,27 @@ class JPKCom_Hide_Login_Mask_Login {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log( '[JPKCom Hide Login] Serving login page for: ' . $request_path );
 			}
+			$this->is_custom_login_request = true;
 			$this->serve_login_page();
 		}
 
-		// Block access to wp-admin for non-logged-in users (except admin-ajax.php).
-		if ( ! is_user_logged_in() && str_contains( $request_path, 'wp-admin' ) ) {
-			if ( str_contains( $request_uri, 'admin-ajax.php' ) ) {
-				return;
-			}
+		// admin-ajax.php must stay reachable for logged-out users.
+		if ( 'admin-ajax.php' === $script ) {
+			return;
+		}
 
+		// Block access to wp-admin for non-logged-in users.
+		// Matching the first path segment rather than searching the whole path:
+		// a substring test also caught legitimate content such as
+		// /my-wp-admin-guide/ and 404'd it for every visitor.
+		$in_wp_admin = ( ( $segments[0] ?? '' ) === 'wp-admin' ) || str_starts_with( $script_path, 'wp-admin/' );
+
+		if ( ! is_user_logged_in() && $in_wp_admin ) {
 			$this->show_404();
 		}
 
 		// Block direct access to wp-login.php.
-		if ( str_contains( $request_path, 'wp-login.php' ) ) {
+		if ( $this->targets_script( 'wp-login.php', $script, $segments ) ) {
 			// Check if IP is whitelisted.
 			if ( $this->ip_manager->is_ip_whitelisted( $ip ) ) {
 				return;
@@ -152,13 +172,81 @@ class JPKCom_Hide_Login_Mask_Login {
 		}
 
 		// Block access to wp-signup.php for Multisite.
-		if ( is_multisite() && str_contains( $request_path, 'wp-signup.php' ) ) {
+		if ( is_multisite() && $this->targets_script( 'wp-signup.php', $script, $segments ) ) {
 			if ( $this->ip_manager->is_ip_whitelisted( $ip ) ) {
 				return;
 			}
 
 			$this->show_404();
 		}
+	}
+
+	/**
+	 * Normalised path of the current request, without query string.
+	 *
+	 * Deliberately avoids `wp_parse_url()`: for an input like `//wp-login.php`
+	 * that function reads `wp-login.php` as the *host* and returns an empty
+	 * path, which is precisely how the previous block was bypassed. The path is
+	 * also percent-decoded and collapsed, so `/wp-%6cogin.php` and
+	 * `//wp-login.php` resolve to the same string the web server resolved.
+	 *
+	 * @since 1.2.5
+	 *
+	 * @return string Normalised path without leading/trailing slashes.
+	 */
+	private function get_request_path(): string {
+		$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+
+		foreach ( [ '?', '#' ] as $cut ) {
+			$pos = strpos( $uri, $cut );
+
+			if ( false !== $pos ) {
+				$uri = substr( $uri, 0, $pos );
+			}
+		}
+
+		$uri = rawurldecode( $uri );
+		$uri = (string) preg_replace( '#/+#', '/', $uri );
+
+		return trim( $uri, '/' );
+	}
+
+	/**
+	 * Path of the script the web server actually resolved and is executing.
+	 *
+	 * This is the authoritative signal: whatever encoding or slash trickery the
+	 * request URI contains, `SCRIPT_NAME` reflects the file PHP is running. For
+	 * a pretty permalink it is `index.php`, so ordinary pages never match.
+	 *
+	 * @since 1.2.5
+	 *
+	 * @return string Script path without a leading slash.
+	 */
+	private function get_script_path(): string {
+		$script = isset( $_SERVER['SCRIPT_NAME'] ) ? (string) wp_unslash( $_SERVER['SCRIPT_NAME'] ) : '';
+		$script = (string) preg_replace( '#/+#', '/', $script );
+
+		return ltrim( $script, '/' );
+	}
+
+	/**
+	 * Whether the request targets a given core script.
+	 *
+	 * Checks the executing script first, then falls back to an exact path
+	 * segment match so setups that route the file through a rewrite are still
+	 * caught. A segment comparison avoids matching a page whose slug merely
+	 * contains the file name.
+	 *
+	 * @since 1.2.5
+	 *
+	 * @param string $file     Script file name, e.g. 'wp-login.php'.
+	 * @param string $script   Base name of the executing script.
+	 * @param array  $segments Segments of the normalised request path.
+	 *
+	 * @return bool True if the request targets the script.
+	 */
+	private function targets_script( string $file, string $script, array $segments ): bool {
+		return $file === $script || in_array( $file, $segments, true );
 	}
 
 	/**
@@ -378,6 +466,19 @@ class JPKCom_Hide_Login_Mask_Login {
 
 		// If URL contains wp-login.php, replace it with custom slug.
 		if ( str_contains( $location, 'wp-login.php' ) ) {
+			// Only reveal the slug where it is actually needed: while we are
+			// serving the masked login page, or to an already authenticated
+			// request. Otherwise an unauthenticated probe that provokes a
+			// redirect to wp-login.php would get the secret slug handed to it in
+			// the Location header, which defeats the masking entirely.
+			if ( ! $this->is_custom_login_request && ! is_user_logged_in() ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( '[JPKCom Hide Login] Not rewriting redirect for anonymous request - would disclose the slug' );
+				}
+
+				return $location;
+			}
+
 			// Parse the URL to extract query parameters.
 			$parsed_url = wp_parse_url( $location );
 			$query_params = [];
