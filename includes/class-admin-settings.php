@@ -342,12 +342,16 @@ class JPKCom_Hide_Login_Admin_Settings {
 	private function slug_exists_in_posts( string $slug ): bool {
 		global $wpdb;
 
-		$query = $wpdb->prepare(
-			"SELECT ID FROM $wpdb->posts WHERE post_name = %s AND post_status = 'publish' AND post_type IN ('post', 'page') LIMIT 1",
-			$slug
+		// A direct query on purpose: WP_Query would build full post objects and
+		// run the whole query pipeline just to answer whether one post_name is
+		// taken, and this runs once, on save.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return (bool) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE post_name = %s AND post_status = 'publish' AND post_type IN ('post', 'page') LIMIT 1",
+				$slug
+			)
 		);
-
-		return (bool) $wpdb->get_var( $query );
 	}
 
 	/**
@@ -369,6 +373,15 @@ class JPKCom_Hide_Login_Admin_Settings {
 		$attempt_window   = (int) get_option( self::OPTION_ATTEMPT_WINDOW, 60 );
 		$block_duration   = (int) get_option( self::OPTION_BLOCK_DURATION, 600 );
 		$block_minutes    = (int) ceil( $block_duration / 60 );
+
+		// A non-public client address means the site is behind something that is
+		// not declared as a trusted proxy, so every visitor shares one address.
+		$trusted_proxies = $this->ip_manager->get_trusted_proxies();
+		$proxy_suspected = empty( $trusted_proxies ) && $this->ip_manager->looks_like_proxy_address( $current_ip );
+
+		// The worse half of that: the shared address is whitelisted, which turns
+		// the protection off for everybody rather than merely lumping them together.
+		$protection_disabled = $proxy_suspected && $this->ip_manager->is_ip_whitelisted( $current_ip );
 
 		?>
 		<div class="wrap">
@@ -515,8 +528,8 @@ class JPKCom_Hide_Login_Admin_Settings {
 						printf(
 							/* translators: 1: Maximum login attempts, 2: Block duration in minutes */
 							esc_html__( 'Active - IPs are blocked for %2$d minutes after %1$d failed login attempts', 'jpkcom-hide-login' ),
-							$max_attempts,
-							$block_minutes
+							absint( $max_attempts ),
+							absint( $block_minutes )
 						);
 						?>
 					</td>
@@ -541,10 +554,10 @@ class JPKCom_Hide_Login_Admin_Settings {
 							$blocked_at = isset( $data['blocked_at'] ) ? (int) $data['blocked_at'] : 0;
 							$expiry     = isset( $data['expiry'] ) ? (int) $data['expiry'] : 0;
 							$remaining  = max( 0, $expiry - time() );
-							$ip_display = isset( $data['ip'] ) ? esc_html( $data['ip'] ) : esc_html__( 'Hidden', 'jpkcom-hide-login' );
+							$ip_display = isset( $data['ip'] ) ? (string) $data['ip'] : __( 'Hidden', 'jpkcom-hide-login' );
 							?>
 							<tr>
-								<td><code><?php echo $ip_display; ?></code></td>
+								<td><code><?php echo esc_html( $ip_display ); ?></code></td>
 								<td><?php echo esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $blocked_at ) ); ?></td>
 								<td><?php echo esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $expiry ) ); ?></td>
 								<td><?php echo esc_html( human_time_diff( time(), $expiry ) ); ?></td>
@@ -578,6 +591,44 @@ class JPKCom_Hide_Login_Admin_Settings {
 						<code><?php echo esc_html( $current_ip ); ?></code>
 						<?php if ( $this->ip_manager->is_ip_whitelisted( $current_ip ) ) : ?>
 							<span class="dashicons dashicons-yes-alt" style="color: #46b450;" title="<?php esc_attr_e( 'Whitelisted', 'jpkcom-hide-login' ); ?>"></span>
+						<?php endif; ?>
+
+						<?php if ( $proxy_suspected ) : ?>
+							<div class="notice notice-warning inline" style="margin: 10px 0 0;">
+								<p>
+									<strong><?php esc_html_e( 'This does not look like a visitor address.', 'jpkcom-hide-login' ); ?></strong>
+									<?php esc_html_e( 'It is a loopback, private or link-local address, which normally means the site is reached through a reverse proxy, a CDN or a container router — and that every visitor arrives with this same address.', 'jpkcom-hide-login' ); ?>
+								</p>
+								<?php if ( $protection_disabled ) : ?>
+									<p>
+										<strong><?php esc_html_e( 'Brute force protection is currently ineffective:', 'jpkcom-hide-login' ); ?></strong>
+										<?php esc_html_e( 'this address is on the built-in whitelist, so no visitor is ever counted or blocked, and wp-login.php stays reachable for everyone.', 'jpkcom-hide-login' ); ?>
+									</p>
+								<?php else : ?>
+									<p>
+										<?php esc_html_e( 'Until this is fixed, failed logins from anywhere in the world count against this one address, so five wrong passwords lock out every visitor at once.', 'jpkcom-hide-login' ); ?>
+									</p>
+								<?php endif; ?>
+								<p>
+									<?php esc_html_e( 'Declare the proxy in wp-config.php so its forwarded headers may be believed:', 'jpkcom-hide-login' ); ?>
+								</p>
+								<p>
+									<code>define( 'JPKCOM_HIDE_LOGIN_TRUSTED_PROXIES', '<?php echo esc_html( $current_ip ); ?>' );</code>
+								</p>
+								<p class="description">
+									<?php esc_html_e( 'Single addresses or CIDR ranges, comma separated, IPv4 and IPv6. Only list proxies you control — anything named here is allowed to state the visitor address. The jpkcom_hide_login_trusted_proxies filter does the same thing in PHP.', 'jpkcom-hide-login' ); ?>
+								</p>
+							</div>
+						<?php elseif ( ! empty( $trusted_proxies ) ) : ?>
+							<p class="description">
+								<?php
+								printf(
+									/* translators: %s: Comma separated list of trusted proxy addresses or ranges */
+									esc_html__( 'Trusted proxies: %s', 'jpkcom-hide-login' ),
+									'<code>' . esc_html( implode( ', ', $trusted_proxies ) ) . '</code>'
+								);
+								?>
+							</p>
 						<?php endif; ?>
 					</td>
 				</tr>
@@ -742,7 +793,12 @@ class JPKCom_Hide_Login_Admin_Settings {
 	 * @return void
 	 */
 	public function show_notices(): void {
-		if ( ! isset( $_GET['page'] ) || 'jpkcom-hide-login' !== $_GET['page'] ) {
+		// No nonce needed: these two parameters only select one of the fixed
+		// messages below. Nothing is read, written or acted upon.
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+
+		if ( 'jpkcom-hide-login' !== $page ) {
 			return;
 		}
 
@@ -750,7 +806,8 @@ class JPKCom_Hide_Login_Admin_Settings {
 			return;
 		}
 
-		$message = sanitize_key( $_GET['message'] );
+		$message = sanitize_key( wp_unslash( $_GET['message'] ) );
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		$messages = [
 			'blocks_cleared'    => [
 				'type' => 'success',

@@ -83,12 +83,7 @@ final class JPKComGitPluginUpdater {
         // Security: Validate and sanitize manifest URL
         $manifest_url = esc_url_raw( $manifest_url );
         if ( ! wp_http_validate_url( $manifest_url ) ) {
-            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                error_log( sprintf(
-                    'JPKCom Plugin Updater: Invalid manifest URL provided: %s',
-                    $manifest_url
-                ) );
-            }
+            \jpkcom_hide_login_log( sprintf( 'Updater: invalid manifest URL provided: %s', $manifest_url ), 'error' );
             return; // Invalid URL, abort initialization
         }
 
@@ -149,38 +144,31 @@ final class JPKComGitPluginUpdater {
 
             // Error handling with logging
             if ( is_wp_error( $response ) ) {
-                if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                    error_log( sprintf(
-                        'JPKCom Plugin Updater: Failed to fetch manifest from %s - Error: %s',
+                \jpkcom_hide_login_log(
+                    sprintf(
+                        'Updater: failed to fetch manifest from %s - %s',
                         $this->manifest_url,
                         $response->get_error_message()
-                    ) );
-                }
+                    ),
+                    'error'
+                );
                 $this->remember_failure();
                 return null;
             }
 
             $response_code = wp_remote_retrieve_response_code( $response );
             if ( $response_code !== 200 ) {
-                if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                    error_log( sprintf(
-                        'JPKCom Plugin Updater: Invalid response code %d from %s',
-                        $response_code,
-                        $this->manifest_url
-                    ) );
-                }
+                \jpkcom_hide_login_log(
+                    sprintf( 'Updater: invalid response code %d from %s', $response_code, $this->manifest_url ),
+                    'error'
+                );
                 $this->remember_failure();
                 return null;
             }
 
             $remote = json_decode( json: wp_remote_retrieve_body( $response ) );
             if ( json_last_error() !== JSON_ERROR_NONE ) {
-                if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                    error_log( sprintf(
-                        'JPKCom Plugin Updater: JSON decode error: %s',
-                        json_last_error_msg()
-                    ) );
-                }
+                \jpkcom_hide_login_log( sprintf( 'Updater: JSON decode error: %s', json_last_error_msg() ), 'error' );
                 $this->remember_failure();
                 return null;
             }
@@ -357,12 +345,7 @@ final class JPKComGitPluginUpdater {
             // Validate and sanitize download URL
             $download_url = $remote->download_url ?? '';
             if ( ! empty( $download_url ) && ! wp_http_validate_url( $download_url ) ) {
-                if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                    error_log( sprintf(
-                        'JPKCom Plugin Updater: Invalid download URL in manifest: %s',
-                        $download_url
-                    ) );
-                }
+                \jpkcom_hide_login_log( sprintf( 'Updater: invalid download URL in manifest: %s', $download_url ), 'error' );
                 return $transient; // Invalid download URL, skip update
             }
 
@@ -489,6 +472,7 @@ final class JPKComGitPluginUpdater {
             return new \WP_Error(
                 'download_failed',
                 sprintf(
+                    /* translators: %s: Error message from the failed download */
                     __( 'Download failed: %s', 'jpkcom-hide-login' ),
                     $temp_file->get_error_message()
                 )
@@ -501,7 +485,7 @@ final class JPKComGitPluginUpdater {
         // Verify checksum (timing-safe).
         $expected_hash = strtolower( trim( (string) $remote->checksum_sha256 ) );
         if ( ! is_string( $calculated_hash ) || ! hash_equals( $expected_hash, $calculated_hash ) ) {
-            @unlink( $temp_file );
+            wp_delete_file( $temp_file );
 
             $error_msg = sprintf(
                 /* translators: 1: expected SHA-256 hash, 2: calculated SHA-256 hash */
@@ -510,16 +494,12 @@ final class JPKComGitPluginUpdater {
                 is_string( $calculated_hash ) ? $calculated_hash : '(hash failed)'
             );
 
-            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                error_log( 'JPKCom Plugin Updater: ' . $error_msg );
-            }
+            \jpkcom_hide_login_log( 'Updater: ' . $error_msg, 'error' );
 
             return new \WP_Error( 'checksum_mismatch', $error_msg );
         }
 
-        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-            error_log( 'JPKCom Plugin Updater: Checksum verification successful' );
-        }
+        \jpkcom_hide_login_log( 'Updater: checksum verification successful', 'error' );
 
         // Hand the *verified* file to WP_Upgrader instead of returning $reply.
         //

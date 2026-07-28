@@ -64,9 +64,7 @@ class JPKCom_Hide_Login_Mask_Login {
 	 * @return void
 	 */
 	public function init_hooks(): void {
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[JPKCom Hide Login] Mask_Login init_hooks called. Custom slug: ' . $this->custom_slug );
-		}
+		jpkcom_hide_login_log( 'Mask_Login init_hooks called. Custom slug: ' . $this->custom_slug );
 
 		// Handle login requests early.
 		add_action( 'init', [ $this, 'handle_login_request' ], 1 );
@@ -81,9 +79,7 @@ class JPKCom_Hide_Login_Mask_Login {
 		add_filter( 'register_url', [ $this, 'filter_register_url' ], 10 );
 		add_filter( 'logout_redirect', [ $this, 'filter_logout_redirect' ], 10, 3 );
 
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[JPKCom Hide Login] All filters registered' );
-		}
+		jpkcom_hide_login_log( 'All filters registered' );
 
 		// Filter site_url and network_site_url for wp-login.php references.
 		add_filter( 'site_url', [ $this, 'filter_site_url' ], 100, 3 );
@@ -123,6 +119,7 @@ class JPKCom_Hide_Login_Mask_Login {
 		}
 
 		// Skip for WooCommerce AJAX.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Routing decision on a public request; nothing is read or written.
 		if ( ! empty( $_GET['wc-ajax'] ) ) {
 			return;
 		}
@@ -133,15 +130,11 @@ class JPKCom_Hide_Login_Mask_Login {
 		$script       = basename( $script_path );
 		$ip           = $this->ip_manager->get_current_ip();
 
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[JPKCom Hide Login] handle_login_request - Request path: ' . $request_path . ' | Script: ' . $script_path . ' | Custom slug: ' . $this->custom_slug );
-		}
+		jpkcom_hide_login_log( 'handle_login_request - Request path: ' . $request_path . ' | Script: ' . $script_path . ' | Custom slug: ' . $this->custom_slug );
 
 		// Serve login page if custom slug is accessed.
 		if ( $request_path === $this->custom_slug ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[JPKCom Hide Login] Serving login page for: ' . $request_path );
-			}
+			jpkcom_hide_login_log( 'Serving login page for: ' . $request_path );
 			$this->is_custom_login_request = true;
 			$this->serve_login_page();
 		}
@@ -171,8 +164,17 @@ class JPKCom_Hide_Login_Mask_Login {
 			$this->show_404();
 		}
 
-		// Block access to wp-signup.php for Multisite.
-		if ( is_multisite() && $this->targets_script( 'wp-signup.php', $script, $segments ) ) {
+		// Block direct access to wp-signup.php.
+		//
+		// Deliberately not limited to Multisite. On a single site wp-signup.php
+		// answers with `wp_redirect( wp_registration_url() )`, and because
+		// filter_register_url() rewrites that to the custom slug, one anonymous
+		// request to /wp-signup.php handed the secret slug straight back in the
+		// Location header - the very disclosure filter_wp_redirect() guards
+		// against. The page has no purpose outside Multisite anyway, and on
+		// Multisite signup is reached through the masked slug with
+		// ?action=signup.
+		if ( $this->targets_script( 'wp-signup.php', $script, $segments ) ) {
 			if ( $this->ip_manager->is_ip_whitelisted( $ip ) ) {
 				return;
 			}
@@ -195,6 +197,11 @@ class JPKCom_Hide_Login_Mask_Login {
 	 * @return string Normalised path without leading/trailing slashes.
 	 */
 	private function get_request_path(): string {
+		// Deliberately not sanitize_text_field(): this value is compared against
+		// core script names, and stripping characters before that comparison is
+		// exactly how the `//wp-login.php` and `/wp-%6cogin.php` bypasses worked.
+		// It is normalised below and never echoed.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
 
 		foreach ( [ '?', '#' ] as $cut ) {
@@ -223,6 +230,8 @@ class JPKCom_Hide_Login_Mask_Login {
 	 * @return string Script path without a leading slash.
 	 */
 	private function get_script_path(): string {
+		// See get_request_path(): compared, normalised, never output.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$script = isset( $_SERVER['SCRIPT_NAME'] ) ? (string) wp_unslash( $_SERVER['SCRIPT_NAME'] ) : '';
 		$script = (string) preg_replace( '#/+#', '/', $script );
 
@@ -255,12 +264,11 @@ class JPKCom_Hide_Login_Mask_Login {
 	 * @return void
 	 */
 	private function serve_login_page(): void {
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[JPKCom Hide Login] serve_login_page called' );
-		}
+		jpkcom_hide_login_log( 'serve_login_page called' );
 
 		// Handle Multisite signup requests.
-		if ( is_multisite() && isset( $_GET['action'] ) && 'signup' === $_GET['action'] ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public login page routing; wp-signup.php does its own nonce handling.
+		if ( is_multisite() && isset( $_GET['action'] ) && 'signup' === sanitize_key( wp_unslash( $_GET['action'] ) ) ) {
 			$GLOBALS['pagenow'] = 'wp-signup.php';
 			require_once ABSPATH . 'wp-signup.php';
 			exit;
@@ -272,11 +280,10 @@ class JPKCom_Hide_Login_Mask_Login {
 		// Tell WordPress we're on the login page.
 		$GLOBALS['pagenow'] = 'wp-login.php';
 
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[JPKCom Hide Login] Set $GLOBALS[pagenow] = wp-login.php' );
-			error_log( '[JPKCom Hide Login] Current REQUEST_URI: ' . ( $_SERVER['REQUEST_URI'] ?? 'none' ) );
-			error_log( '[JPKCom Hide Login] GET params: ' . print_r( $_GET, true ) );
-		}
+		// The former dump of REQUEST_URI and the whole $_GET array is gone on
+		// purpose: it wrote every login attempt's query string - including
+		// password-reset keys - into the error log.
+		jpkcom_hide_login_log( 'Set $GLOBALS[pagenow] = wp-login.php' );
 
 		// CRITICAL: Do NOT modify $_SERVER variables!
 		// The form needs to POST to the current REQUEST_URI (our custom slug),
@@ -306,13 +313,23 @@ class JPKCom_Hide_Login_Mask_Login {
 	/**
 	 * Filter login_url to use custom slug.
 	 *
+	 * The arguments are untyped on purpose: `login_url` is a public filter and
+	 * callers pass null for "no redirect" often enough that a `string $redirect`
+	 * signature is a fatal waiting to happen. Same reasoning as
+	 * JPKCom_Hide_Login_Login_Protection::handle_failed_login().
+	 *
+	 * @since 1.2.7 Tolerates null arguments from third-party callers.
+	 *
 	 * @param string $login_url    Original login URL.
-	 * @param string $redirect     Redirect URL after login.
-	 * @param bool   $force_reauth Whether to force re-authentication.
+	 * @param mixed  $redirect     Redirect URL after login.
+	 * @param mixed  $force_reauth Whether to force re-authentication.
 	 *
 	 * @return string Modified login URL.
 	 */
-	public function filter_login_url( string $login_url, string $redirect = '', bool $force_reauth = false ): string {
+	public function filter_login_url( string $login_url, mixed $redirect = '', mixed $force_reauth = false ): string {
+		$redirect     = is_string( $redirect ) ? $redirect : '';
+		$force_reauth = (bool) $force_reauth;
+
 		// Check if URL already contains our custom slug - if so, don't modify.
 		if ( str_contains( $login_url, $this->custom_slug ) ) {
 			return $login_url;
@@ -349,17 +366,19 @@ class JPKCom_Hide_Login_Mask_Login {
 	/**
 	 * Filter logout_url to use custom slug.
 	 *
+	 * @since 1.2.7 Tolerates a null redirect.
+	 *
 	 * @param string $logout_url Original logout URL.
-	 * @param string $redirect   Redirect URL after logout.
+	 * @param mixed  $redirect   Redirect URL after logout.
 	 *
 	 * @return string Modified logout URL.
 	 */
-	public function filter_logout_url( string $logout_url, string $redirect = '' ): string {
+	public function filter_logout_url( string $logout_url, mixed $redirect = '' ): string {
+		$redirect = is_string( $redirect ) ? $redirect : '';
+
 		// Check if URL already contains our custom slug - if so, don't modify.
 		if ( str_contains( $logout_url, $this->custom_slug ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[JPKCom Hide Login] logout_url already contains custom slug: ' . $logout_url );
-			}
+			jpkcom_hide_login_log( 'logout_url already contains custom slug: ' . $logout_url );
 			return $logout_url;
 		}
 
@@ -368,9 +387,7 @@ class JPKCom_Hide_Login_Mask_Login {
 			return $logout_url;
 		}
 
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[JPKCom Hide Login] Filtering logout_url: ' . $logout_url );
-		}
+		jpkcom_hide_login_log( 'Filtering logout_url: ' . $logout_url );
 
 		$custom_url = home_url( '/' . $this->custom_slug . '/' );
 
@@ -387,9 +404,7 @@ class JPKCom_Hide_Login_Mask_Login {
 			$custom_url = add_query_arg( 'redirect_to', rawurlencode( $redirect ), $custom_url );
 		}
 
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[JPKCom Hide Login] New logout_url: ' . $custom_url );
-		}
+		jpkcom_hide_login_log( 'New logout_url: ' . $custom_url );
 
 		return $custom_url;
 	}
@@ -397,12 +412,15 @@ class JPKCom_Hide_Login_Mask_Login {
 	/**
 	 * Filter lostpassword_url to use custom slug.
 	 *
+	 * @since 1.2.7 Tolerates a null redirect.
+	 *
 	 * @param string $lostpassword_url Original lost password URL.
-	 * @param string $redirect         Redirect URL after password reset.
+	 * @param mixed  $redirect         Redirect URL after password reset.
 	 *
 	 * @return string Modified lost password URL.
 	 */
-	public function filter_lostpassword_url( string $lostpassword_url, string $redirect = '' ): string {
+	public function filter_lostpassword_url( string $lostpassword_url, mixed $redirect = '' ): string {
+		$redirect   = is_string( $redirect ) ? $redirect : '';
 		$custom_url = home_url( '/' . $this->custom_slug . '/?action=lostpassword' );
 
 		if ( ! empty( $redirect ) ) {
@@ -415,24 +433,27 @@ class JPKCom_Hide_Login_Mask_Login {
 	/**
 	 * Filter register_url to use custom slug.
 	 *
-	 * @param string $register_url Original registration URL.
+	 * @param mixed $register_url Original registration URL.
 	 *
 	 * @return string Modified registration URL.
 	 */
-	public function filter_register_url( string $register_url ): string {
+	public function filter_register_url( mixed $register_url = '' ): string {
 		return home_url( '/' . $this->custom_slug . '/?action=register' );
 	}
 
 	/**
 	 * Filter logout redirect to use custom login page.
 	 *
-	 * @param string         $redirect_to           Redirect URL.
-	 * @param string         $requested_redirect_to Requested redirect URL.
-	 * @param \WP_User|mixed $user                  User object.
+	 * @param mixed $redirect_to           Redirect URL.
+	 * @param mixed $requested_redirect_to Requested redirect URL.
+	 * @param mixed $user                  User object.
 	 *
 	 * @return string Modified redirect URL.
 	 */
-	public function filter_logout_redirect( string $redirect_to, string $requested_redirect_to, $user ): string {
+	public function filter_logout_redirect( mixed $redirect_to = '', mixed $requested_redirect_to = '', mixed $user = null ): string {
+		$redirect_to           = is_string( $redirect_to ) ? $redirect_to : '';
+		$requested_redirect_to = is_string( $requested_redirect_to ) ? $requested_redirect_to : '';
+
 		if ( empty( $requested_redirect_to ) || str_contains( $redirect_to, 'wp-login.php' ) ) {
 			return home_url( '/' . $this->custom_slug . '/?loggedout=true' );
 		}
@@ -455,10 +476,8 @@ class JPKCom_Hide_Login_Mask_Login {
 	 */
 	public function filter_wp_redirect( string $location, int $status ): string {
 		// Log for debugging.
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[JPKCom Hide Login] wp_redirect called with location: ' . $location );
-			error_log( '[JPKCom Hide Login] is_serving_login_page: ' . ( $this->is_serving_login_page() ? 'yes' : 'no' ) );
-		}
+		jpkcom_hide_login_log( 'wp_redirect called with location: ' . $location );
+		jpkcom_hide_login_log( 'is_serving_login_page: ' . ( $this->is_serving_login_page() ? 'yes' : 'no' ) );
 
 		// IMPORTANT: We must filter redirects even when serving login page.
 		// After login processing, WordPress may redirect to wp-login.php with error messages.
@@ -472,9 +491,7 @@ class JPKCom_Hide_Login_Mask_Login {
 			// redirect to wp-login.php would get the secret slug handed to it in
 			// the Location header, which defeats the masking entirely.
 			if ( ! $this->is_custom_login_request && ! is_user_logged_in() ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( '[JPKCom Hide Login] Not rewriting redirect for anonymous request - would disclose the slug' );
-				}
+				jpkcom_hide_login_log( 'Not rewriting redirect for anonymous request - would disclose the slug' );
 
 				return $location;
 			}
@@ -495,9 +512,7 @@ class JPKCom_Hide_Login_Mask_Login {
 				$new_location = add_query_arg( $query_params, $new_location );
 			}
 
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( '[JPKCom Hide Login] Replacing with: ' . $new_location );
-			}
+			jpkcom_hide_login_log( 'Replacing with: ' . $new_location );
 
 			return $new_location;
 		}
@@ -508,13 +523,16 @@ class JPKCom_Hide_Login_Mask_Login {
 	/**
 	 * Filter site_url for wp-login.php references.
 	 *
-	 * @param string      $url    Complete site URL.
-	 * @param string      $path   Path relative to site URL.
-	 * @param string|null $scheme URL scheme.
+	 * @param string $url    Complete site URL.
+	 * @param mixed  $path   Path relative to site URL.
+	 * @param mixed  $scheme URL scheme.
 	 *
 	 * @return string Modified URL.
 	 */
-	public function filter_site_url( string $url, string $path, ?string $scheme ): string {
+	public function filter_site_url( string $url, mixed $path = '', mixed $scheme = null ): string {
+		$path   = is_string( $path ) ? $path : '';
+		$scheme = is_string( $scheme ) ? $scheme : null;
+
 		// IMPORTANT: We MUST filter site_url even when serving login page!
 		// wp-login.php uses site_url() to build the form action attribute,
 		// so we need to replace wp-login.php with our custom slug.
@@ -562,13 +580,16 @@ class JPKCom_Hide_Login_Mask_Login {
 	/**
 	 * Filter network_site_url for Multisite.
 	 *
-	 * @param string      $url    Complete network site URL.
-	 * @param string      $path   Path relative to network site URL.
-	 * @param string|null $scheme URL scheme.
+	 * @param string $url    Complete network site URL.
+	 * @param mixed  $path   Path relative to network site URL.
+	 * @param mixed  $scheme URL scheme.
 	 *
 	 * @return string Modified URL.
 	 */
-	public function filter_network_site_url( string $url, string $path, ?string $scheme ): string {
+	public function filter_network_site_url( string $url, mixed $path = '', mixed $scheme = null ): string {
+		$path   = is_string( $path ) ? $path : '';
+		$scheme = is_string( $scheme ) ? $scheme : null;
+
 		if ( ! is_multisite() ) {
 			return $url;
 		}
@@ -619,19 +640,25 @@ class JPKCom_Hide_Login_Mask_Login {
 	 * @return void
 	 */
 	public function handle_password_reset(): void {
-		$request_uri  = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
-		$request_path = trim( (string) wp_parse_url( $request_uri, PHP_URL_PATH ), '/' );
+		$request_path = $this->get_request_path();
 
-		if ( str_contains( $request_path, 'wp-login.php' ) ) {
-			$redirect_url = home_url( '/' . $this->custom_slug . '/' );
-
-			if ( ! empty( $_GET ) ) {
-				$redirect_url = add_query_arg( $_GET, $redirect_url );
-			}
-
-			wp_safe_redirect( $redirect_url );
-			exit;
+		if ( ! in_array( 'wp-login.php', explode( '/', $request_path ), true ) ) {
+			return;
 		}
+
+		$redirect_url = home_url( '/' . $this->custom_slug . '/' );
+
+		// The reset link carries `login`, `key` and `action`; they are handed
+		// straight back to the masked login page, so sanitise rather than trust.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A password reset link is its own credential; wp-login.php validates the key.
+		$args = array_map( 'sanitize_text_field', wp_unslash( $_GET ) );
+
+		if ( ! empty( $args ) ) {
+			$redirect_url = add_query_arg( $args, $redirect_url );
+		}
+
+		wp_safe_redirect( $redirect_url );
+		exit;
 	}
 
 	/**

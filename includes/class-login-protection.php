@@ -74,16 +74,48 @@ class JPKCom_Hide_Login_Login_Protection {
 	/**
 	 * Handle failed login attempt.
 	 *
-	 * @param string   $username Username used in login attempt.
-	 * @param \WP_Error $error    WP_Error object with error details.
+	 * Both parameters are deliberately untyped and optional. `wp_login_failed`
+	 * is a public action and third-party code fires it with whatever it happens
+	 * to have: MainWP Child, for one, calls the sibling `wp_login` action with a
+	 * single argument. A `string $username, \WP_Error $error` signature turns
+	 * that into an ArgumentCountError - a fatal in the middle of the login
+	 * request, caused by someone else's call.
+	 *
+	 * @since 1.2.7 Tolerates foreign argument shapes.
+	 *
+	 * @param mixed $username Username used in login attempt.
+	 * @param mixed $error    WP_Error object with error details, if provided.
 	 *
 	 * @return void
 	 */
-	public function handle_failed_login( string $username, \WP_Error $error ): void {
-		$ip = $this->ip_manager->get_current_ip();
+	public function handle_failed_login( mixed $username = '', mixed $error = null ): void {
+		$username = is_string( $username ) ? $username : '';
+		$ip       = $this->ip_manager->get_current_ip();
 
 		// Skip if IP is whitelisted.
 		if ( $this->ip_manager->is_ip_whitelisted( $ip ) ) {
+			return;
+		}
+
+		// An attempt that was rejected *because* the IP is already blocked must
+		// not count towards the very counter that produced the block.
+		//
+		// check_login_attempts() returns a WP_Error for a blocked IP, which makes
+		// WordPress fire wp_login_failed - so every retry used to increment the
+		// counter and call block_ip() again with a fresh full duration. The block
+		// renewed itself for as long as anyone kept trying, which made the
+		// "try again in N minutes" message untrue: a locked-out administrator
+		// hitting reload never got back in. Measured on a test site, three
+		// retries pushed the expiry 18 seconds further out.
+		if ( $this->ip_manager->is_ip_blocked( $ip ) ) {
+			$this->log_event(
+				sprintf(
+					'Rejected attempt from already blocked IP %s (username: %s) - not counted',
+					$ip,
+					$username
+				)
+			);
+
 			return;
 		}
 
@@ -120,13 +152,20 @@ class JPKCom_Hide_Login_Login_Protection {
 	/**
 	 * Check login attempts before authentication.
 	 *
+	 * `authenticate` is applied by core and by plugins alike, and a null user
+	 * name is a perfectly ordinary value there - the previous `string $username`
+	 * made that a TypeError.
+	 *
+	 * @since 1.2.7 Tolerates a non-string user name.
+	 *
 	 * @param \WP_User|\WP_Error|null $user     User object or WP_Error.
-	 * @param string                  $username Username used in login attempt.
+	 * @param mixed                   $username Username used in login attempt.
 	 *
 	 * @return \WP_User|\WP_Error|null Modified user object or error.
 	 */
-	public function check_login_attempts( $user, string $username ) {
-		$ip = $this->ip_manager->get_current_ip();
+	public function check_login_attempts( $user = null, mixed $username = '' ) {
+		$username = is_string( $username ) ? $username : '';
+		$ip       = $this->ip_manager->get_current_ip();
 
 		// Skip if IP is whitelisted.
 		if ( $this->ip_manager->is_ip_whitelisted( $ip ) ) {
@@ -184,13 +223,16 @@ class JPKCom_Hide_Login_Login_Protection {
 	/**
 	 * Clear login attempts after successful login.
 	 *
-	 * @param string   $username Username used in login.
-	 * @param \WP_User $user     User object.
+	 * @since 1.2.7 Tolerates foreign argument shapes; see handle_failed_login().
+	 *
+	 * @param mixed $username Username used in login.
+	 * @param mixed $user     User object, if provided.
 	 *
 	 * @return void
 	 */
-	public function clear_login_attempts( string $username, \WP_User $user ): void {
-		$ip = $this->ip_manager->get_current_ip();
+	public function clear_login_attempts( mixed $username = '', mixed $user = null ): void {
+		$username = is_string( $username ) ? $username : '';
+		$ip       = $this->ip_manager->get_current_ip();
 
 		$this->delete_login_attempts( $ip );
 
@@ -268,9 +310,7 @@ class JPKCom_Hide_Login_Login_Protection {
 	 * @return void
 	 */
 	private function log_event( string $message ): void {
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '[JPKCom Hide Login] ' . $message );
-		}
+		jpkcom_hide_login_log( $message );
 	}
 
 	/**

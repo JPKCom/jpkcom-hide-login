@@ -13,6 +13,7 @@
 declare(strict_types=1);
 
 define( 'ABSPATH', '/tmp/jpkcom-hide-login-tests/' );
+define( 'JPKCOM_HIDE_LOGIN_DEBUG', false );
 
 $GLOBALS['__options']    = [];
 $GLOBALS['__transients'] = [];
@@ -50,6 +51,22 @@ function esc_html__( $s, $d = null ) { return $s; }
 function __( $s, $d = null ) { return $s; }
 function sanitize_title_with_dashes( $s ) { return strtolower( (string) $s ); }
 function class_exists_wc() { return false; }
+function jpkcom_hide_login_log( $message, $level = 'trace' ) {}
+function sanitize_key( $k ) { return strtolower( preg_replace( '/[^a-zA-Z0-9_\-]/', '', (string) $k ) ); }
+function _n( $s, $p, $n, $d = null ) { return 1 === $n ? $s : $p; }
+function is_wp_error( $t ) { return $t instanceof WP_Error; }
+
+/**
+ * Just enough of WP_Error for the login-protection callbacks.
+ */
+class WP_Error {
+	public array $errors = [];
+	public function __construct( $code = '', $message = '' ) {
+		if ( '' !== $code ) { $this->errors[ $code ][] = $message; }
+	}
+	public function add( $code, $message = '' ) { $this->errors[ $code ][] = $message; }
+	public function get_error_message() { return reset( $this->errors )[0] ?? ''; }
+}
 
 /**
  * Stands in for wp_die(); the tests treat the exception as "blocked with 404".

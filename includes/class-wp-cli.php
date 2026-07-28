@@ -121,6 +121,7 @@ class JPKCom_Hide_Login_WP_CLI {
 	 *
 	 *     wp jpkcom-hide-login get-slug
 	 *
+	 * @subcommand get-slug
 	 * @when after_wp_load
 	 */
 	public function get_slug(): void {
@@ -140,6 +141,7 @@ class JPKCom_Hide_Login_WP_CLI {
 	 *
 	 *     wp jpkcom-hide-login set-slug my-secure-login
 	 *
+	 * @subcommand set-slug
 	 * @when after_wp_load
 	 *
 	 * @param array<int, string> $args Command arguments.

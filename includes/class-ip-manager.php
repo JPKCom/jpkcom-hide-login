@@ -169,6 +169,43 @@ class JPKCom_Hide_Login_IP_Manager {
 	}
 
 	/**
+	 * Whether an address looks like a proxy or gateway rather than a visitor.
+	 *
+	 * If every request appears to come from a loopback, private, link-local or
+	 * CGNAT address, the site is sitting behind something - a reverse proxy, a
+	 * CDN, a container router, a load balancer - and `REMOTE_ADDR` is that hop,
+	 * not the visitor. Two things follow, both bad and both silent:
+	 *
+	 * - All visitors share one address, so five failed logins from anywhere lock
+	 *   out everybody.
+	 * - If that address happens to be 127.0.0.1, ::1 or SERVER_ADDR, it is on the
+	 *   built-in whitelist, and both the wp-login.php block and the brute-force
+	 *   protection are effectively switched off for the entire internet.
+	 *
+	 * The cure is to declare the proxy via `JPKCOM_HIDE_LOGIN_TRUSTED_PROXIES`
+	 * so the forwarded headers may be believed. This method exists so the admin
+	 * screen can point that out instead of leaving it to be discovered.
+	 *
+	 * @since 1.2.7
+	 *
+	 * @param string $ip IP address to classify.
+	 *
+	 * @return bool True if the address cannot be a public visitor address.
+	 */
+	public function looks_like_proxy_address( string $ip ): bool {
+		if ( false === filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+			return false;
+		}
+
+		// Public addresses are what a directly reached site sees.
+		if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
 	 * Check if an IP address is whitelisted.
 	 *
 	 * @param string $ip IP address to check.

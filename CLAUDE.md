@@ -9,7 +9,7 @@ JPKCom Hide Login is a professional WordPress security plugin that renames the d
 ## Requirements
 
 - **PHP:** 8.3+ (enforced via runtime check in jpkcom-hide-login.php:67-73)
-- **WordPress:** 6.8+ (enforced via runtime check in jpkcom-hide-login.php:76-82)
+- **WordPress:** 6.9+ — header and runtime check both driven by `JPKCOM_HIDE_LOGIN_MIN_WP`; `JPKCOM_HIDE_LOGIN_MIN_PHP` does the same for PHP. Change the constant *and* the plugin header together.
 - **Multisite:** Fully supported with network-wide configuration options
 
 ## Architecture
@@ -46,7 +46,8 @@ jpkcom-hide-login/
 - Multisite network admin menu and settings page (lines 260-344)
 
 **Constants:**
-- `JPKCOM_HIDE_LOGIN_VERSION` - Plugin version (1.2.5)
+- `JPKCOM_HIDE_LOGIN_VERSION` - Plugin version (1.2.7)
+- `JPKCOM_HIDE_LOGIN_DEBUG` - Verbose request tracing, default `false`. Deliberately *not* `WP_DEBUG`: the mask runs on `init` for every request, so tying tracing to `WP_DEBUG` wrote ~10 lines per request into every dev/staging log.
 - `JPKCOM_HIDE_LOGIN_OPTION` - Per-site option name
 - `JPKCOM_HIDE_LOGIN_DEFAULT_SLUG` - Default slug ('jpkcom-login')
 - `JPKCOM_HIDE_LOGIN_NETWORK_OPTION` - Network option name (Multisite)
@@ -250,6 +251,8 @@ exit;
 **Registration:**
 Commands are registered in jpkcom-hide-login.php during `plugins_loaded` hook if WP-CLI is available.
 
+WP-CLI derives subcommand names from **method names**, so `get_slug()` registered as `get_slug`, not the documented `get-slug`. Both slug commands therefore carry an explicit `@subcommand get-slug` / `@subcommand set-slug` annotation. Add one to any future method whose name contains an underscore, otherwise the documented command simply does not exist.
+
 ### Slug Resolution Priority
 
 The function `jpkcom_hide_login_get_slug()` resolves slugs with this priority:
@@ -282,6 +285,15 @@ The function `jpkcom_hide_login_get_slug()` resolves slugs with this priority:
 - **Manual Cleanup:** Via WP-CLI command `wp jpkcom-hide-login cleanup`
 - **Deactivation:** All scheduled cron events are cleared on plugin deactivation
 
+**A block must never renew itself:**
+`check_login_attempts()` returns a `WP_Error` for a blocked IP, and WordPress fires `wp_login_failed` for that rejection like any other. `handle_failed_login()` therefore returns early when the IP is already blocked — otherwise every retry increments the counter and calls `block_ip()` again with a fresh full duration, so the block lasts as long as someone keeps trying and the "try again in N minutes" message is a lie.
+
+**Client IP that is not public means the setup is broken, not the visitor:**
+`JPKCom_Hide_Login_IP_Manager::looks_like_proxy_address()` flags loopback/private/link-local addresses. With no trusted proxy declared, that means all visitors share one address (collective lockout) or — if the address is whitelisted — the protection is off entirely. The settings screen says so rather than leaving it to be discovered.
+
+**Hook callbacks must tolerate foreign argument shapes:**
+`wp_login`, `wp_login_failed` and `authenticate` are public and third-party code fires them with whatever it has — MainWP Child calls `do_action( 'wp_login', $user_login )` with a *single* argument. Under `declare(strict_types=1)` a `string $username, \WP_User $user` signature turns that into a fatal `ArgumentCountError` in the middle of someone else's login. Every hook callback in `class-login-protection.php` and the URL filters in `class-mask-login.php` therefore take `mixed`/optional parameters and normalise inside. Do not "tighten" these signatures back up.
+
 **Direct File Access Prevention:**
 All PHP files include the check:
 ```php
@@ -296,7 +308,9 @@ All files use `declare(strict_types=1);` and type hints on all methods.
 ### Text Domain & Translations
 
 - Text domain: `jpkcom-hide-login`
-- Domain path: `/languages` (empty directory, ready for translations)
+- Domain path: `/languages` — ships `de_DE` and `de_DE_formal` as `.po`, `.mo` **and** `.l10n.php`
+
+**Never hand-write the `.l10n.php` files.** Regenerate them from the `.po` with `wp i18n make-php languages/`. A plural entry in that format is `'<singular>' => "<form0>\0<form1>"` — a *NUL-joined string*. Up to 1.2.6 both files stored plural entries as PHP **arrays**; `WP_Translation_Controller::locate_translation()` passes the value straight to `explode()`, so on a German site the second failed login attempt died with a fatal `TypeError` and the login page returned HTTP 500 — brute-force protection never blocked anything, because the request never got that far.
 - Translation loading: jpkcom-hide-login.php:89-95
 - All user-facing strings wrapped in `__()`, `_e()`, `_n()`, `esc_html__()`, etc.
 
@@ -568,7 +582,7 @@ Ensure user has `manage_options` capability. Network admins should access networ
 ### IP blocking not working
 
 - Check if IP detection works: view current IP in admin settings
-- Verify attempts are being counted: check debug log with WP_DEBUG enabled
+- Verify attempts are being counted: `define( 'JPKCOM_HIDE_LOGIN_DEBUG', true );` and check the debug log
 - Ensure WordPress transients are working (check caching plugins)
 
 ### Custom slug not saving
@@ -644,6 +658,7 @@ Rename plugin folder via FTP:
 
 ## Version History
 
+- **1.2.7** (2026-07-28) - Fixed the malformed `.l10n.php` plural entries (fatal 500 on the second failed login on German sites), blocked `wp-signup.php` on single sites (it disclosed the secret slug via `wp_registration_url()`), stopped blocks renewing themselves on every retry, made all hook callbacks tolerate foreign argument shapes, added the reverse-proxy warning to the settings screen, aligned the runtime version check with the header, registered the `get-slug` / `set-slug` WP-CLI subcommands, moved request tracing to `JPKCOM_HIDE_LOGIN_DEBUG`, cleared all Plugin Check findings
 - **1.2.0** (2025-11-12) - Added customizable brute force thresholds, WP-CLI commands for management, automatic database cleanup via WordPress Cron
 - **1.1.0** (2025-11-02) - Complete rewrite with modular architecture, IP whitelist, enhanced brute force protection
 - **1.0.0** (2024-10-01) - Initial release

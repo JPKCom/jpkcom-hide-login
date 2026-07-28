@@ -1,102 +1,44 @@
-# Copyright (C) 2025 Jean Pierre Kolb
-# This file is distributed under the GPL-2.0+.
+# Copyright (C) 2026 Jean Pierre Kolb <jpk@jpkc.com>
+# This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: JPKCom Hide Login 1.2.0\n"
-"Report-Msgid-Bugs-To: https://github.com/JPKCom/jpkcom-hide-login/issues\n"
-"POT-Creation-Date: 2025-01-12 12:00+0000\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Project-Id-Version: JPKCom Hide Login 1.2.7\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/jpkcom-hide-login\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: JPKCom Hide Login\n"
-"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+"POT-Creation-Date: 2026-07-28T17:00:08+02:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: jpkcom-hide-login\n"
 
-#: jpkcom-hide-login.php:70
-msgid "JPKCom Hide Login requires PHP 8.3 or higher."
-msgstr ""
-
-#: jpkcom-hide-login.php:71 jpkcom-hide-login.php:80
-msgid "Plugin Deactivated"
-msgstr ""
-
-#: jpkcom-hide-login.php:79
-msgid "JPKCom Hide Login requires WordPress 6.8 or higher."
-msgstr ""
-
-#: jpkcom-hide-login.php:260
-msgid "(network-wide setting active)"
-msgstr ""
-
-#: jpkcom-hide-login.php:266
-msgid "JPKCom Hide Login activated! Your new login URL:"
-msgstr ""
-
-#: jpkcom-hide-login.php:305
+#. Plugin Name of the plugin
+#: jpkcom-hide-login.php
+#: jpkcom-hide-login.php:383
 msgid "JPKCom Hide Login"
 msgstr ""
 
-#: jpkcom-hide-login.php:309
-#, php-format
-msgid "%d IP is currently blocked due to multiple failed login attempts."
-msgid_plural "%d IPs are currently blocked due to multiple failed login attempts."
-msgstr[0] ""
-msgstr[1] ""
-
-#: jpkcom-hide-login.php:331
-msgid "JPKCom Hide Login (Network)"
+#. Plugin URI of the plugin
+#: jpkcom-hide-login.php
+msgid "https://github.com/JPKCom/jpkcom-hide-login"
 msgstr ""
 
-#: jpkcom-hide-login.php:332
-msgid "Hide Login (Network)"
+#. Description of the plugin
+#: jpkcom-hide-login.php
+msgid "Rename wp-login.php to a custom slug, with brute force protection and IP whitelist management."
 msgstr ""
 
-#: jpkcom-hide-login.php:357
-msgid "Network slug removed. Sites will use their own settings."
+#. Author of the plugin
+#: jpkcom-hide-login.php
+msgid "Jean Pierre Kolb <jpk@jpkc.com>"
 msgstr ""
 
-#: jpkcom-hide-login.php:365
-msgid "Network slug updated."
+#. Author URI of the plugin
+#: jpkcom-hide-login.php
+msgid "https://www.jpkc.com/"
 msgstr ""
-
-#: jpkcom-hide-login.php:376
-msgid "JPKCom Hide Login — Network Settings"
-msgstr ""
-
-#: jpkcom-hide-login.php:385
-msgid "Network-wide login slug"
-msgstr ""
-
-#: jpkcom-hide-login.php:398
-msgid "Set a network-wide login slug. Leave empty to let each site use its own slug."
-msgstr ""
-
-#: jpkcom-hide-login.php:404
-msgid "Save Network Settings"
-msgstr ""
-
-#: includes/class-mask-login.php:212
-msgid "Page not found."
-msgstr ""
-
-#: includes/class-mask-login.php:213
-msgid "404 Not Found"
-msgstr ""
-
-#: includes/class-login-protection.php:142
-#, php-format
-msgid "Too many failed login attempts. Please try again in %d minutes."
-msgstr ""
-
-#: includes/class-login-protection.php:169
-#, php-format
-msgid "%d login attempt remaining."
-msgid_plural "%d login attempts remaining."
-msgstr[0] ""
-msgstr[1] ""
 
 #: includes/class-admin-settings.php:111
 msgid "JPKCom Hide Login Settings"
@@ -138,179 +80,315 @@ msgstr ""
 msgid "Block duration cannot exceed 86400 seconds (24 hours)."
 msgstr ""
 
-#: includes/class-admin-settings.php:388
+#: includes/class-admin-settings.php:401
 msgid "Custom Login URL Slug"
 msgstr ""
 
-#: includes/class-admin-settings.php:405
+#. translators: %s: Full custom login URL
+#: includes/class-admin-settings.php:418
 #, php-format
 msgid "Your current login URL: %s"
 msgstr ""
 
-#: includes/class-admin-settings.php:414
+#: includes/class-admin-settings.php:427
 msgid "Save Changes"
 msgstr ""
 
-#: includes/class-admin-settings.php:420
+#: includes/class-admin-settings.php:433
 msgid "Brute Force Protection Settings"
 msgstr ""
 
-#: includes/class-admin-settings.php:431
+#: includes/class-admin-settings.php:444
 msgid "Maximum Login Attempts"
 msgstr ""
 
-#: includes/class-admin-settings.php:446
+#: includes/class-admin-settings.php:459
 msgid "Number of failed login attempts before an IP is blocked (1-100). Default: 5"
 msgstr ""
 
-#: includes/class-admin-settings.php:453
+#: includes/class-admin-settings.php:466
 msgid "Attempt Window (seconds)"
 msgstr ""
 
-#: includes/class-admin-settings.php:468
+#: includes/class-admin-settings.php:481
 msgid "Time window for counting failed attempts in seconds (1-3600). Default: 60"
 msgstr ""
 
-#: includes/class-admin-settings.php:475
+#: includes/class-admin-settings.php:488
 msgid "Block Duration (seconds)"
 msgstr ""
 
-#: includes/class-admin-settings.php:493
+#. translators: %d: Block duration in minutes
+#: includes/class-admin-settings.php:506
 #, php-format
 msgid "How long to block an IP after max attempts in seconds (1-86400). Default: 600 (%d minutes)"
 msgstr ""
 
-#: includes/class-admin-settings.php:502
+#: includes/class-admin-settings.php:515
 msgid "Save Brute Force Settings"
 msgstr ""
 
-#: includes/class-admin-settings.php:508
+#: includes/class-admin-settings.php:521
 msgid "Brute Force Protection Status"
 msgstr ""
 
-#: includes/class-admin-settings.php:511
+#: includes/class-admin-settings.php:524
 msgid "Current Status"
 msgstr ""
 
-#: includes/class-admin-settings.php:517
+#. translators: 1: Maximum login attempts, 2: Block duration in minutes
+#: includes/class-admin-settings.php:530
 #, php-format
 msgid "Active - IPs are blocked for %2$d minutes after %1$d failed login attempts"
 msgstr ""
 
-#: includes/class-admin-settings.php:527
+#: includes/class-admin-settings.php:540
 msgid "Currently Blocked IPs"
 msgstr ""
 
-#: includes/class-admin-settings.php:532
+#: includes/class-admin-settings.php:545
 msgid "IP Address"
 msgstr ""
 
-#: includes/class-admin-settings.php:533
+#: includes/class-admin-settings.php:546
 msgid "Blocked At"
 msgstr ""
 
-#: includes/class-admin-settings.php:534
+#: includes/class-admin-settings.php:547
 msgid "Expires At"
 msgstr ""
 
-#: includes/class-admin-settings.php:535
+#: includes/class-admin-settings.php:548
 msgid "Time Remaining"
 msgstr ""
 
-#: includes/class-admin-settings.php:544
+#: includes/class-admin-settings.php:557
 msgid "Hidden"
 msgstr ""
 
-#: includes/class-admin-settings.php:560
+#: includes/class-admin-settings.php:573
 msgid "Clear All Blocked IPs"
 msgstr ""
 
-#: includes/class-admin-settings.php:565
+#: includes/class-admin-settings.php:578
 msgid "No IPs are currently blocked."
 msgstr ""
 
-#: includes/class-admin-settings.php:571
+#: includes/class-admin-settings.php:584
 msgid "IP Whitelist"
 msgstr ""
 
-#: includes/class-admin-settings.php:572
+#: includes/class-admin-settings.php:585
 msgid "Whitelisted IP addresses will never be blocked by brute force protection. Supports CIDR notation (e.g., 192.168.1.0/24)."
 msgstr ""
 
-#: includes/class-admin-settings.php:576
+#: includes/class-admin-settings.php:589
 msgid "Your Current IP"
 msgstr ""
 
-#: includes/class-admin-settings.php:580
+#: includes/class-admin-settings.php:593
 msgid "Whitelisted"
 msgstr ""
 
-#: includes/class-admin-settings.php:587
-msgid "Add IP to Whitelist"
+#: includes/class-admin-settings.php:599
+msgid "This does not look like a visitor address."
 msgstr ""
 
-#: includes/class-admin-settings.php:595
-msgid "IP Address or CIDR Range"
+#: includes/class-admin-settings.php:600
+msgid "It is a loopback, private or link-local address, which normally means the site is reached through a reverse proxy, a CDN or a container router — and that every visitor arrives with this same address."
 msgstr ""
 
-#: includes/class-admin-settings.php:608
-msgid "Enter a single IP address or a CIDR range."
+#: includes/class-admin-settings.php:604
+msgid "Brute force protection is currently ineffective:"
+msgstr ""
+
+#: includes/class-admin-settings.php:605
+msgid "this address is on the built-in whitelist, so no visitor is ever counted or blocked, and wp-login.php stays reachable for everyone."
+msgstr ""
+
+#: includes/class-admin-settings.php:609
+msgid "Until this is fixed, failed logins from anywhere in the world count against this one address, so five wrong passwords lock out every visitor at once."
 msgstr ""
 
 #: includes/class-admin-settings.php:613
+msgid "Declare the proxy in wp-config.php so its forwarded headers may be believed:"
+msgstr ""
+
+#: includes/class-admin-settings.php:619
+msgid "Single addresses or CIDR ranges, comma separated, IPv4 and IPv6. Only list proxies you control — anything named here is allowed to state the visitor address. The jpkcom_hide_login_trusted_proxies filter does the same thing in PHP."
+msgstr ""
+
+#. translators: %s: Comma separated list of trusted proxy addresses or ranges
+#: includes/class-admin-settings.php:627
+#, php-format
+msgid "Trusted proxies: %s"
+msgstr ""
+
+#: includes/class-admin-settings.php:638
+msgid "Add IP to Whitelist"
+msgstr ""
+
+#: includes/class-admin-settings.php:646
+msgid "IP Address or CIDR Range"
+msgstr ""
+
+#: includes/class-admin-settings.php:659
+msgid "Enter a single IP address or a CIDR range."
+msgstr ""
+
+#: includes/class-admin-settings.php:664
 msgid "Add to Whitelist"
 msgstr ""
 
-#: includes/class-admin-settings.php:618
+#: includes/class-admin-settings.php:669
 msgid "Current Whitelist"
 msgstr ""
 
-#: includes/class-admin-settings.php:622
+#: includes/class-admin-settings.php:673
 msgid "IP Address / Range"
 msgstr ""
 
-#: includes/class-admin-settings.php:623
+#: includes/class-admin-settings.php:674
 msgid "Actions"
 msgstr ""
 
-#: includes/class-admin-settings.php:636
+#: includes/class-admin-settings.php:687
 msgid "Remove"
 msgstr ""
 
-#: includes/class-admin-settings.php:645
+#: includes/class-admin-settings.php:696
 msgid "No IPs are currently whitelisted."
 msgstr ""
 
-#: includes/class-admin-settings.php:658 includes/class-admin-settings.php:681 includes/class-admin-settings.php:719
+#: includes/class-admin-settings.php:709
+#: includes/class-admin-settings.php:732
+#: includes/class-admin-settings.php:770
 msgid "Unauthorized access."
 msgstr ""
 
-#: includes/class-admin-settings.php:757
+#: includes/class-admin-settings.php:814
 msgid "All blocked IPs have been cleared successfully."
 msgstr ""
 
-#: includes/class-admin-settings.php:761
+#: includes/class-admin-settings.php:818
 msgid "IP address added to whitelist successfully."
 msgstr ""
 
-#: includes/class-admin-settings.php:765
+#: includes/class-admin-settings.php:822
 msgid "IP address removed from whitelist successfully."
 msgstr ""
 
-#: includes/class-admin-settings.php:769
+#: includes/class-admin-settings.php:826
 msgid "Invalid IP address or CIDR range."
 msgstr ""
 
-#: includes/class-admin-settings.php:773
+#: includes/class-admin-settings.php:830
 msgid "Please enter an IP address."
 msgstr ""
 
-#: includes/class-plugin-updater.php:410 includes/class-plugin-updater.php:427
+#. translators: %d: Number of minutes until unblock
+#: includes/class-login-protection.php:181
+#, php-format
+msgid "Too many failed login attempts. Please try again in %d minutes."
+msgstr ""
+
+#. translators: %d: Number of login attempts remaining
+#: includes/class-login-protection.php:208
+#, php-format
+msgid "%d login attempt remaining."
+msgid_plural "%d login attempts remaining."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-mask-login.php:307
+msgid "Page not found."
+msgstr ""
+
+#: includes/class-mask-login.php:308
+msgid "404 Not Found"
+msgstr ""
+
+#: includes/class-plugin-updater.php:458
+msgid "Security verification failed: the update manifest could not be loaded, so the package cannot be verified."
+msgstr ""
+
+#: includes/class-plugin-updater.php:465
+msgid "Security verification failed: the update manifest contains no SHA-256 checksum, so the package cannot be verified."
+msgstr ""
+
+#. translators: %s: Error message from the failed download
+#: includes/class-plugin-updater.php:476
 #, php-format
 msgid "Download failed: %s"
 msgstr ""
 
-#: includes/class-plugin-updater.php:426
+#. translators: 1: expected SHA-256 hash, 2: calculated SHA-256 hash
+#: includes/class-plugin-updater.php:492
 #, php-format
-msgid "Security verification failed: Plugin checksum mismatch. Expected: %s, Got: %s"
+msgid "Security verification failed: Plugin checksum mismatch. Expected: %1$s, Got: %2$s"
+msgstr ""
+
+#. translators: %s: Minimum required PHP version
+#: jpkcom-hide-login.php:140
+#, php-format
+msgid "JPKCom Hide Login requires PHP %s or higher."
+msgstr ""
+
+#: jpkcom-hide-login.php:144
+#: jpkcom-hide-login.php:159
+msgid "Plugin Deactivated"
+msgstr ""
+
+#. translators: %s: Minimum required WordPress version
+#: jpkcom-hide-login.php:155
+#, php-format
+msgid "JPKCom Hide Login requires WordPress %s or higher."
+msgstr ""
+
+#: jpkcom-hide-login.php:334
+msgid "(network-wide setting active)"
+msgstr ""
+
+#: jpkcom-hide-login.php:340
+msgid "JPKCom Hide Login activated! Your new login URL:"
+msgstr ""
+
+#. translators: %d: Number of blocked IPs
+#: jpkcom-hide-login.php:387
+#, php-format
+msgid "%d IP is currently blocked due to multiple failed login attempts."
+msgid_plural "%d IPs are currently blocked due to multiple failed login attempts."
+msgstr[0] ""
+msgstr[1] ""
+
+#: jpkcom-hide-login.php:409
+msgid "JPKCom Hide Login (Network)"
+msgstr ""
+
+#: jpkcom-hide-login.php:410
+msgid "Hide Login (Network)"
+msgstr ""
+
+#: jpkcom-hide-login.php:437
+msgid "Network slug removed. Sites will use their own settings."
+msgstr ""
+
+#: jpkcom-hide-login.php:445
+msgid "Network slug updated."
+msgstr ""
+
+#: jpkcom-hide-login.php:456
+msgid "JPKCom Hide Login — Network Settings"
+msgstr ""
+
+#: jpkcom-hide-login.php:465
+msgid "Network-wide login slug"
+msgstr ""
+
+#: jpkcom-hide-login.php:478
+msgid "Set a network-wide login slug. Leave empty to let each site use its own slug."
+msgstr ""
+
+#: jpkcom-hide-login.php:484
+msgid "Save Network Settings"
 msgstr ""

@@ -2,8 +2,8 @@
 /*
 Plugin Name: JPKCom Hide Login
 Plugin URI: https://github.com/JPKCom/jpkcom-hide-login
-Description: Rename the default WordPress login URL (wp-login.php) to a custom slug for enhanced security. Includes brute force protection and IP whitelist management.
-Version: 1.2.6
+Description: Rename wp-login.php to a custom slug, with brute force protection and IP whitelist management.
+Version: 1.2.7
 Author: Jean Pierre Kolb <jpk@jpkc.com>
 Author URI: https://www.jpkc.com/
 Contributors: JPKCom
@@ -12,7 +12,7 @@ Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 8.3
 Network: true
-Stable tag: 1.2.6
+Stable tag: 1.2.7
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: jpkcom-hide-login
@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Plugin Constants
  */
 if ( ! defined( 'JPKCOM_HIDE_LOGIN_VERSION' ) ) {
-	define( 'JPKCOM_HIDE_LOGIN_VERSION', '1.2.6' );
+	define( 'JPKCOM_HIDE_LOGIN_VERSION', '1.2.7' );
 }
 
 if ( ! defined( 'JPKCOM_HIDE_LOGIN_OPTION' ) ) {
@@ -57,6 +57,73 @@ if ( ! defined( 'JPKCOM_HIDE_LOGIN_PLUGIN_URL' ) ) {
 }
 
 /**
+ * Minimum environment, mirroring the `Requires PHP` / `Requires at least`
+ * plugin headers.
+ *
+ * Kept as constants so the runtime check and the headers cannot drift apart
+ * again: up to 1.2.6 the header demanded WordPress 6.9 while the runtime check
+ * still let 6.8 through.
+ *
+ * @since 1.2.7
+ */
+if ( ! defined( 'JPKCOM_HIDE_LOGIN_MIN_PHP' ) ) {
+	define( 'JPKCOM_HIDE_LOGIN_MIN_PHP', '8.3' );
+}
+
+if ( ! defined( 'JPKCOM_HIDE_LOGIN_MIN_WP' ) ) {
+	define( 'JPKCOM_HIDE_LOGIN_MIN_WP', '6.9' );
+}
+
+/**
+ * Verbose request tracing.
+ *
+ * Deliberately its own switch rather than WP_DEBUG. The mask runs on `init` for
+ * *every* request, and tying its tracing to WP_DEBUG wrote roughly ten lines per
+ * request - including the request URI and the full $_GET of every login attempt
+ * - into the error log of every development and staging site. Enable explicitly
+ * with `define( 'JPKCOM_HIDE_LOGIN_DEBUG', true );` when diagnosing the mask.
+ *
+ * @since 1.2.7
+ */
+if ( ! defined( 'JPKCOM_HIDE_LOGIN_DEBUG' ) ) {
+	define( 'JPKCOM_HIDE_LOGIN_DEBUG', false );
+}
+
+/**
+ * Write a diagnostic message to the PHP error log.
+ *
+ * Two levels, because they answer different questions:
+ *
+ * - `trace` is the per-request chatter of the login mask and needs
+ *   `JPKCOM_HIDE_LOGIN_DEBUG`. It is far too loud for `WP_DEBUG`, which every
+ *   development site has switched on.
+ * - `error` is something that actually went wrong (a failed update, a rejected
+ *   package) and follows `WP_DEBUG`, so it surfaces where a developer looks.
+ *
+ * Funnelling every call through here also keeps the one unavoidable
+ * `error_log()` sniff exemption in a single place instead of twenty.
+ *
+ * @since 1.2.7
+ *
+ * @param string $message Message to log, without the plugin prefix.
+ * @param string $level   Either 'trace' or 'error'.
+ *
+ * @return void
+ */
+function jpkcom_hide_login_log( string $message, string $level = 'trace' ): void {
+	$enabled = 'error' === $level
+		? ( defined( 'WP_DEBUG' ) && WP_DEBUG )
+		: JPKCOM_HIDE_LOGIN_DEBUG;
+
+	if ( ! $enabled ) {
+		return;
+	}
+
+	// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Deliberate, gated diagnostic output.
+	error_log( '[JPKCom Hide Login] ' . $message );
+}
+
+/**
  * Requirements Check
  *
  * Deactivate plugin if requirements are not met.
@@ -64,19 +131,31 @@ if ( ! defined( 'JPKCOM_HIDE_LOGIN_PLUGIN_URL' ) ) {
 add_action( 'admin_init', static function (): void {
 	global $wp_version;
 
-	if ( version_compare( PHP_VERSION, '8.3', '<' ) ) {
+	if ( version_compare( PHP_VERSION, JPKCOM_HIDE_LOGIN_MIN_PHP, '<' ) ) {
 		deactivate_plugins( JPKCOM_HIDE_LOGIN_BASENAME );
 		wp_die(
-			esc_html__( 'JPKCom Hide Login requires PHP 8.3 or higher.', 'jpkcom-hide-login' ),
+			esc_html(
+				sprintf(
+					/* translators: %s: Minimum required PHP version */
+					__( 'JPKCom Hide Login requires PHP %s or higher.', 'jpkcom-hide-login' ),
+					JPKCOM_HIDE_LOGIN_MIN_PHP
+				)
+			),
 			esc_html__( 'Plugin Deactivated', 'jpkcom-hide-login' ),
 			[ 'back_link' => true ]
 		);
 	}
 
-	if ( version_compare( $wp_version, '6.8', '<' ) ) {
+	if ( version_compare( $wp_version, JPKCOM_HIDE_LOGIN_MIN_WP, '<' ) ) {
 		deactivate_plugins( JPKCOM_HIDE_LOGIN_BASENAME );
 		wp_die(
-			esc_html__( 'JPKCom Hide Login requires WordPress 6.8 or higher.', 'jpkcom-hide-login' ),
+			esc_html(
+				sprintf(
+					/* translators: %s: Minimum required WordPress version */
+					__( 'JPKCom Hide Login requires WordPress %s or higher.', 'jpkcom-hide-login' ),
+					JPKCOM_HIDE_LOGIN_MIN_WP
+				)
+			),
 			esc_html__( 'Plugin Deactivated', 'jpkcom-hide-login' ),
 			[ 'back_link' => true ]
 		);
@@ -84,15 +163,16 @@ add_action( 'admin_init', static function (): void {
 } );
 
 /**
- * Load Text Domain
+ * Translations.
+ *
+ * No load_plugin_textdomain() call: since WordPress 6.7 the textdomain registry
+ * picks the plugin's own /languages directory up from the `Domain Path` header
+ * and loads it just in time, and the plugin requires 6.9. Calling it manually
+ * only pins loading to `plugins_loaded`, which is what triggers the
+ * "translation loading was triggered too early" notice elsewhere.
+ *
+ * @since 1.2.7
  */
-add_action( 'plugins_loaded', static function (): void {
-	load_plugin_textdomain(
-		'jpkcom-hide-login',
-		false,
-		dirname( JPKCOM_HIDE_LOGIN_BASENAME ) . '/languages'
-	);
-} );
 
 /**
  * Plugin Activation Hook
@@ -160,9 +240,7 @@ require_once JPKCOM_HIDE_LOGIN_PLUGIN_PATH . 'includes/class-admin-settings.php'
  * Bootstrap Plugin
  */
 add_action( 'plugins_loaded', static function (): void {
-	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		error_log( '[JPKCom Hide Login] Plugin bootstrap starting...' );
-	}
+	jpkcom_hide_login_log( 'Plugin bootstrap starting...' );
 
 	// Initialize components.
 	$ip_manager       = new JPKCom_Hide_Login_IP_Manager();
@@ -180,17 +258,13 @@ add_action( 'plugins_loaded', static function (): void {
 	$mask_login       = new JPKCom_Hide_Login_Mask_Login( $ip_manager, jpkcom_hide_login_get_slug() );
 	$admin_settings   = new JPKCom_Hide_Login_Admin_Settings( $ip_manager, $mask_login, $login_protection );
 
-	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		error_log( '[JPKCom Hide Login] Components initialized. Slug: ' . jpkcom_hide_login_get_slug() );
-	}
+	jpkcom_hide_login_log( 'Components initialized. Slug: ' . jpkcom_hide_login_get_slug() );
 
 	// Initialize hooks.
 	$login_protection->init_hooks();
 	$mask_login->init_hooks();
 
-	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		error_log( '[JPKCom Hide Login] Hooks initialized. is_admin: ' . ( is_admin() ? 'yes' : 'no' ) );
-	}
+	jpkcom_hide_login_log( 'Hooks initialized. is_admin: ' . ( is_admin() ? 'yes' : 'no' ) );
 
 	if ( is_admin() ) {
 		$admin_settings->init_hooks();
@@ -249,23 +323,24 @@ add_action( 'admin_notices', static function (): void {
 		return;
 	}
 
-	$slug        = jpkcom_hide_login_get_slug();
-	$url         = esc_url( home_url( '/' . $slug . '/' ) );
+	$slug         = jpkcom_hide_login_get_slug();
+	$url          = home_url( '/' . $slug . '/' );
 	$network_hint = '';
 
 	if ( is_multisite() ) {
 		$network_slug = get_site_option( JPKCOM_HIDE_LOGIN_NETWORK_OPTION, null );
 
 		if ( null !== $network_slug && false !== $network_slug && '' !== (string) $network_slug ) {
-			$network_hint = ' ' . esc_html__( '(network-wide setting active)', 'jpkcom-hide-login' );
+			$network_hint = ' ' . __( '(network-wide setting active)', 'jpkcom-hide-login' );
 		}
 	}
 
 	printf(
-		'<div class="notice notice-success is-dismissible"><p><strong>%s</strong> %s%s</p></div>',
+		'<div class="notice notice-success is-dismissible"><p><strong>%1$s</strong> <a href="%2$s" target="_blank">%3$s</a>%4$s</p></div>',
 		esc_html__( 'JPKCom Hide Login activated! Your new login URL:', 'jpkcom-hide-login' ),
-		'<a href="' . $url . '" target="_blank">' . esc_html( $url ) . '</a>',
-		$network_hint
+		esc_url( $url ),
+		esc_html( $url ),
+		esc_html( $network_hint )
 	);
 
 	update_option( 'jpkcom_hide_login_notice_shown', true );
@@ -283,7 +358,10 @@ add_action( 'admin_notices', static function (): void {
 
 	$allowed_pages = [ 'index.php', 'options-general.php' ];
 
-	if ( 'options-general.php' === $pagenow && ( $_GET['page'] ?? '' ) !== 'jpkcom-hide-login' ) {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read only to decide where the notice is shown.
+	$current_page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+
+	if ( 'options-general.php' === $pagenow && 'jpkcom-hide-login' !== $current_page ) {
 		return;
 	}
 
@@ -345,8 +423,10 @@ function jpkcom_hide_login_network_settings_page(): void {
 	}
 
 	// Handle form submission.
-	if ( 'POST' === $_SERVER['REQUEST_METHOD'] && check_admin_referer( 'jpkcom_hide_login_network_save', 'jpkcom_hide_login_network_nonce' ) ) {
-		$posted    = $_POST['jpkcom_hide_login_network_slug'] ?? '';
+	$method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_key( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
+
+	if ( 'post' === $method && check_admin_referer( 'jpkcom_hide_login_network_save', 'jpkcom_hide_login_network_nonce' ) ) {
+		$posted    = isset( $_POST['jpkcom_hide_login_network_slug'] ) ? sanitize_text_field( wp_unslash( $_POST['jpkcom_hide_login_network_slug'] ) ) : '';
 		$sanitized = sanitize_title_with_dashes( (string) $posted );
 
 		if ( '' === $sanitized ) {

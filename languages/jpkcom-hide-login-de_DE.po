@@ -17,16 +17,16 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: jpkcom-hide-login.php:70
-msgid "JPKCom Hide Login requires PHP 8.3 or higher."
-msgstr "JPKCom Hide Login benötigt PHP 8.3 oder höher."
+msgid "JPKCom Hide Login requires PHP %s or higher."
+msgstr "JPKCom Hide Login benötigt PHP %s oder höher."
 
 #: jpkcom-hide-login.php:71 jpkcom-hide-login.php:80
 msgid "Plugin Deactivated"
 msgstr "Plugin deaktiviert"
 
 #: jpkcom-hide-login.php:79
-msgid "JPKCom Hide Login requires WordPress 6.8 or higher."
-msgstr "JPKCom Hide Login benötigt WordPress 6.8 oder höher."
+msgid "JPKCom Hide Login requires WordPress %s or higher."
+msgstr "JPKCom Hide Login benötigt WordPress %s oder höher."
 
 #: jpkcom-hide-login.php:260
 msgid "(network-wide setting active)"
@@ -315,3 +315,36 @@ msgstr "Download fehlgeschlagen: %s"
 #, php-format
 msgid "Security verification failed: Plugin checksum mismatch. Expected: %s, Got: %s"
 msgstr "Sicherheitsüberprüfung fehlgeschlagen: Plugin-Prüfsumme stimmt nicht überein. Erwartet: %s, Erhalten: %s"
+
+msgid "This does not look like a visitor address."
+msgstr "Das sieht nicht nach einer Besucher-Adresse aus."
+
+msgid "It is a loopback, private or link-local address, which normally means the site is reached through a reverse proxy, a CDN or a container router — and that every visitor arrives with this same address."
+msgstr "Es ist eine Loopback-, private oder Link-Local-Adresse. Das bedeutet in der Regel, dass die Website über einen Reverse-Proxy, ein CDN oder einen Container-Router erreicht wird — und dass alle Besucher mit genau dieser Adresse ankommen."
+
+msgid "Brute force protection is currently ineffective:"
+msgstr "Der Brute-Force-Schutz ist derzeit wirkungslos:"
+
+msgid "this address is on the built-in whitelist, so no visitor is ever counted or blocked, and wp-login.php stays reachable for everyone."
+msgstr "Diese Adresse steht auf der eingebauten Whitelist. Es wird also kein Besucher gezählt oder gesperrt, und wp-login.php bleibt für alle erreichbar."
+
+msgid "Until this is fixed, failed logins from anywhere in the world count against this one address, so five wrong passwords lock out every visitor at once."
+msgstr "Solange das so bleibt, zählen fehlgeschlagene Logins aus aller Welt auf diese eine Adresse — fünf falsche Passwörter sperren damit alle Besucher gleichzeitig aus."
+
+msgid "Declare the proxy in wp-config.php so its forwarded headers may be believed:"
+msgstr "Trage den Proxy in der wp-config.php ein, damit seinen weitergeleiteten Headern vertraut werden darf:"
+
+msgid "Single addresses or CIDR ranges, comma separated, IPv4 and IPv6. Only list proxies you control — anything named here is allowed to state the visitor address. The jpkcom_hide_login_trusted_proxies filter does the same thing in PHP."
+msgstr "Einzelne Adressen oder CIDR-Bereiche, kommagetrennt, IPv4 und IPv6. Trage nur Proxys ein, die du selbst kontrollierst — alles, was hier steht, darf die Besucher-Adresse bestimmen. Der Filter jpkcom_hide_login_trusted_proxies macht dasselbe in PHP."
+
+msgid "Trusted proxies: %s"
+msgstr "Vertrauenswürdige Proxys: %s"
+
+msgid "Security verification failed: the update manifest could not be loaded, so the package cannot be verified."
+msgstr "Sicherheitsprüfung fehlgeschlagen: Das Update-Manifest konnte nicht geladen werden, das Paket lässt sich daher nicht verifizieren."
+
+msgid "Security verification failed: the update manifest contains no SHA-256 checksum, so the package cannot be verified."
+msgstr "Sicherheitsprüfung fehlgeschlagen: Das Update-Manifest enthält keine SHA-256-Prüfsumme, das Paket lässt sich daher nicht verifizieren."
+
+msgid "Security verification failed: Plugin checksum mismatch. Expected: %1$s, Got: %2$s"
+msgstr "Sicherheitsprüfung fehlgeschlagen: Prüfsumme des Plugins stimmt nicht. Erwartet: %1$s, erhalten: %2$s"
