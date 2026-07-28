@@ -5,7 +5,7 @@ https://github.com/JPKCom/jpkcom-hide-login<br />
 <strong>Description:</strong> Rename the WordPress login URL to a custom
 slug for enhanced security. Includes brute force protection and IP
 whitelist management.<br />
-<strong>Version:</strong> 1.2.5<br />
+<strong>Version:</strong> 1.2.6<br />
 <strong>Author:</strong> Jean Pierre Kolb <a href="mailto:jpk@jpkc.com"
 class="email">jpk@jpkc.com</a><br />
 <strong>Author URI:</strong> https://www.jpkc.com/<br />
@@ -16,7 +16,7 @@ Login, Custom Login URL<br />
 <strong>Tested up to:</strong> 7.0<br />
 <strong>Requires PHP:</strong> 8.3<br />
 <strong>Network:</strong> true<br />
-<strong>Stable tag:</strong> 1.2.5<br />
+<strong>Stable tag:</strong> 1.2.6<br />
 <strong>License:</strong> GPL-2.0-or-later<br />
 <strong>License URI:</strong>
 https://www.gnu.org/licenses/gpl-2.0.html<br />
@@ -450,7 +450,14 @@ activation</li>
 </ul>
 <hr />
 <h2 id="changelog">Changelog</h2>
-<h3 id="section">1.2.5</h3>
+<h3 id="section">1.2.6</h3>
+<ul>
+<li>Changed: the plugin banners
+(<code>assets/banner-1544x500.avif</code>,
+<code>assets/banner-772x250.avif</code>) are now a plain
+<code>#3c4955</code> surface with no lettering</li>
+</ul>
+<h3 id="section-1">1.2.5</h3>
 <ul>
 <li><strong>Security:</strong> the client IP is now taken from
 <code>REMOTE_ADDR</code>; <code>X-Forwarded-For</code>,
@@ -488,7 +495,7 @@ upgrade</li>
 regression tests for every issue above, each written to fail against the
 previous implementation. Run in CI on every pull request</li>
 </ul>
-<h3 id="section-1">1.2.4</h3>
+<h3 id="section-2">1.2.4</h3>
 <ul>
 <li>Security: update packages are now verified <em>before</em>
 installation — the verified file is handed to WordPress instead of being
@@ -513,14 +520,14 @@ instead of being retried on every admin request</li>
 <li>Added: CI workflow on every pull request (PHP lint, named-argument
 check, YAML validation, action-pinning guard)</li>
 </ul>
-<h3 id="section-2">1.2.3 (2026-06-16)</h3>
+<h3 id="section-3">1.2.3 (2026-06-16)</h3>
 <ul>
 <li>Raised the minimum WordPress version to 6.9 and “Tested up to” to
 WordPress 7.0</li>
 <li>Switched license metadata to the SPDX identifier
 <code>GPL-2.0-or-later</code> with the HTTPS license URI</li>
 </ul>
-<h3 id="section-3">1.2.2 (2026-06-16)</h3>
+<h3 id="section-4">1.2.2 (2026-06-16)</h3>
 <ul>
 <li>Security: updater prefers an exact match against the manifest
 <code>download_url</code> over the slug heuristic, so a tampered
@@ -537,7 +544,7 @@ completing the <code>no_update</code> transient entry
 (<code>new_version</code>, <code>package</code>, <code>tested</code>,
 <code>requires_php</code>)</li>
 </ul>
-<h3 id="section-4">1.2.1 (2026-03-13)</h3>
+<h3 id="section-5">1.2.1 (2026-03-13)</h3>
 <h4 id="fixed">Fixed</h4>
 <ul>
 <li><strong>ZIP-Upload Fix</strong> - Manual ZIP uploads via WP-Admin no
@@ -546,7 +553,7 @@ longer fail with “invalid URL” error during checksum verification</li>
 creates ZIP with top-level plugin folder, ensuring WordPress correctly
 recognizes updates</li>
 </ul>
-<h3 id="section-5">1.2.0 (2025-11-12)</h3>
+<h3 id="section-6">1.2.0 (2025-11-12)</h3>
 <h4 id="added">Added</h4>
 <ul>
 <li><strong>IP Whitelist Management</strong> - Add trusted IPs that will
@@ -575,7 +582,7 @@ via <code>wp jpkcom-hide-login cleanup</code></li>
 management for all plugin features</li>
 </ul>
 <p>…</p>
-<h3 id="section-6">1.0.0 (2024-11-30)</h3>
+<h3 id="section-7">1.0.0 (2024-11-30)</h3>
 <ul>
 <li>Initial Release</li>
 <li>Basic login URL masking</li>
