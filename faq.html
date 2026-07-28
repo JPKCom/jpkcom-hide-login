@@ -57,6 +57,42 @@ security than redirecting or showing a 403 error.</p>
 <p>After <strong>5 attempts within 60 seconds</strong>, the IP is
 blocked for <strong>10 minutes</strong> with no further access to the
 site.</p>
+<h3
+id="are-wp-adminload-scripts.php-and-load-styles.php-still-reachable">Are
+wp-admin/load-scripts.php and load-styles.php still reachable?</h3>
+<p>Yes, and no plugin can change that. Both files deliberately
+<strong>do not load WordPress</strong> — they <code>require</code> only
+<code>noop.php</code>, <code>script-loader.php</code> and
+<code>version.php</code> — so no hook, filter or <code>init</code>
+callback ever runs for them. They are the one pair of wp-admin URLs this
+plugin cannot mask.</p>
+<p>What they leak is modest: a bare request returns an empty 200, and a
+crafted one serves concatenated WordPress core scripts. Neither reveals
+the custom login slug or whether an account exists; it only confirms
+that the site runs WordPress, which the REST API and
+<code>/wp-includes/</code> assets already do.</p>
+<p>If you still want them gone, it has to happen in the web server,
+above PHP. Both files are used <strong>only by wp-admin</strong>, and
+only when script concatenation is on (<code>CONCATENATE_SCRIPTS</code>);
+the front end never requests them. Restricting them to logged-in
+sessions is therefore safe:</p>
+<p><strong>nginx</strong></p>
+<pre class="nginx"><code>location ~ ^/wp-admin/load-(scripts|styles)\.php$ {
+    if ($http_cookie !~* &quot;wordpress_logged_in_&quot;) {
+        return 404;
+    }
+    include fastcgi_params;
+    fastcgi_pass unix:/run/php/php-fpm.sock;
+}</code></pre>
+<p><strong>Apache (.htaccess in wp-admin/)</strong></p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode apache"><code class="sourceCode apache"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">&lt;FilesMatch</span><span class="at"> &quot;^load-(scripts|styles)\.php$&quot;</span><span class="fu">&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="ex">RewriteEngine</span><span class="ch"> </span><span class="kw">On</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    RewriteCond<span class="st"> %{HTTP_COOKIE} !wordpress_logged_in_ [NC]</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    RewriteRule<span class="st"> .* - [R=404,L]</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">&lt;/FilesMatch&gt;</span></span></code></pre></div>
+<p>Test the admin area afterwards with a cleared cache: if the rule is
+wrong, wp-admin loses its stylesheets and scripts.</p>
 <h3 id="does-this-affect-wordpress-rest-api-or-ajax">Does this affect
 WordPress REST API or AJAX?</h3>
 <p><strong>No.</strong> The plugin intelligently detects and allows:</p>
@@ -92,10 +128,10 @@ seconds</li>
 Default: 600 seconds (10 minutes)</li>
 </ul>
 <p>You can also configure these settings via WP-CLI:</p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection max-attempts 10</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection attempt-window 120</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection block-duration 1800</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection max-attempts 10</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection attempt-window 120</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection block-duration 1800</span></code></pre></div>
 <h3 id="does-this-plugin-modify-core-wordpress-files">Does this plugin
 modify core WordPress files?</h3>
 <p><strong>No.</strong> The plugin uses only WordPress hooks and
@@ -108,15 +144,15 @@ default values in wp-config.php?</h3>
 <p><strong>Yes!</strong> Add these constants to
 <code>wp-config.php</code> (before
 <code>/* That's all, stop editing! */</code>):</p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom default login slug</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_DEFAULT_SLUG&#39;</span><span class="ot">,</span> <span class="st">&#39;my-secret-login&#39;</span> )<span class="ot">;</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom option name for per-site slug</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_OPTION&#39;</span><span class="ot">,</span> <span class="st">&#39;my_custom_login_slug&#39;</span> )<span class="ot">;</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom option name for network slug (Multisite)</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_NETWORK_OPTION&#39;</span><span class="ot">,</span> <span class="st">&#39;my_network_login_slug&#39;</span> )<span class="ot">;</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom default login slug</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_DEFAULT_SLUG&#39;</span><span class="ot">,</span> <span class="st">&#39;my-secret-login&#39;</span> )<span class="ot">;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom option name for per-site slug</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_OPTION&#39;</span><span class="ot">,</span> <span class="st">&#39;my_custom_login_slug&#39;</span> )<span class="ot">;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom option name for network slug (Multisite)</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_NETWORK_OPTION&#39;</span><span class="ot">,</span> <span class="st">&#39;my_network_login_slug&#39;</span> )<span class="ot">;</span></span></code></pre></div>
 <h3 id="will-this-affect-password-reset-emails">Will this affect
 password reset emails?</h3>
 <p><strong>No.</strong> Password reset emails automatically use the
@@ -137,10 +173,10 @@ screen</h4>
 <p>This usually means there’s a PHP error. Check your error logs:</p>
 <ol type="1">
 <li><p>Enable debugging in <code>wp-config.php</code>:</p>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG&#39;</span><span class="ot">,</span> <span class="kw">true</span> )<span class="ot">;</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG_LOG&#39;</span><span class="ot">,</span> <span class="kw">true</span> )<span class="ot">;</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG_DISPLAY&#39;</span><span class="ot">,</span> <span class="kw">false</span> )<span class="ot">;</span></span></code></pre></div></li>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG&#39;</span><span class="ot">,</span> <span class="kw">true</span> )<span class="ot">;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG_LOG&#39;</span><span class="ot">,</span> <span class="kw">true</span> )<span class="ot">;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG_DISPLAY&#39;</span><span class="ot">,</span> <span class="kw">false</span> )<span class="ot">;</span></span></code></pre></div></li>
 <li><p>Check <code>/wp-content/debug.log</code> for errors</p></li>
 <li><p>Report any errors to the plugin support</p></li>
 </ol>

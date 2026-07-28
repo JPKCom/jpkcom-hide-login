@@ -96,10 +96,9 @@
 <p><strong>Plugin Name:</strong> JPKCom Hide Login<br />
 <strong>Plugin URI:</strong>
 https://github.com/JPKCom/jpkcom-hide-login<br />
-<strong>Description:</strong> Rename the WordPress login URL to a custom
-slug for enhanced security. Includes brute force protection and IP
-whitelist management.<br />
-<strong>Version:</strong> 1.2.6<br />
+<strong>Description:</strong> Rename wp-login.php to a custom slug, with
+brute force protection and IP whitelist management.<br />
+<strong>Version:</strong> 1.2.7<br />
 <strong>Author:</strong> Jean Pierre Kolb <a href="mailto:jpk@jpkc.com"
 class="email">jpk@jpkc.com</a><br />
 <strong>Author URI:</strong> https://www.jpkc.com/<br />
@@ -110,15 +109,14 @@ Login, Custom Login URL<br />
 <strong>Tested up to:</strong> 7.0<br />
 <strong>Requires PHP:</strong> 8.3<br />
 <strong>Network:</strong> true<br />
-<strong>Stable tag:</strong> 1.2.6<br />
+<strong>Stable tag:</strong> 1.2.7<br />
 <strong>License:</strong> GPL-2.0-or-later<br />
 <strong>License URI:</strong>
 https://www.gnu.org/licenses/gpl-2.0.html<br />
 <strong>Text Domain:</strong> jpkcom-hide-login<br />
 <strong>Domain Path:</strong> /languages</p>
-<p>Rename the default WordPress login URL (wp-login.php) to a custom
-slug for enhanced security with built-in brute force protection and IP
-management.</p>
+<p>Rename wp-login.php to a custom slug, with brute force protection and
+IP whitelist management.</p>
 <hr />
 <h2 id="description">Description</h2>
 <p><strong>JPKCom Hide Login</strong> is a security plugin that allows
@@ -386,6 +384,42 @@ security than redirecting or showing a 403 error.</p>
 <p>After <strong>5 attempts within 60 seconds</strong>, the IP is
 blocked for <strong>10 minutes</strong> with no further access to the
 site.</p>
+<h3
+id="are-wp-adminload-scripts.php-and-load-styles.php-still-reachable">Are
+wp-admin/load-scripts.php and load-styles.php still reachable?</h3>
+<p>Yes, and no plugin can change that. Both files deliberately
+<strong>do not load WordPress</strong> — they <code>require</code> only
+<code>noop.php</code>, <code>script-loader.php</code> and
+<code>version.php</code> — so no hook, filter or <code>init</code>
+callback ever runs for them. They are the one pair of wp-admin URLs this
+plugin cannot mask.</p>
+<p>What they leak is modest: a bare request returns an empty 200, and a
+crafted one serves concatenated WordPress core scripts. Neither reveals
+the custom login slug or whether an account exists; it only confirms
+that the site runs WordPress, which the REST API and
+<code>/wp-includes/</code> assets already do.</p>
+<p>If you still want them gone, it has to happen in the web server,
+above PHP. Both files are used <strong>only by wp-admin</strong>, and
+only when script concatenation is on (<code>CONCATENATE_SCRIPTS</code>);
+the front end never requests them. Restricting them to logged-in
+sessions is therefore safe:</p>
+<p><strong>nginx</strong></p>
+<pre class="nginx"><code>location ~ ^/wp-admin/load-(scripts|styles)\.php$ {
+    if ($http_cookie !~* &quot;wordpress_logged_in_&quot;) {
+        return 404;
+    }
+    include fastcgi_params;
+    fastcgi_pass unix:/run/php/php-fpm.sock;
+}</code></pre>
+<p><strong>Apache (.htaccess in wp-admin/)</strong></p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode apache"><code class="sourceCode apache"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">&lt;FilesMatch</span><span class="at"> &quot;^load-(scripts|styles)\.php$&quot;</span><span class="fu">&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="ex">RewriteEngine</span><span class="ch"> </span><span class="kw">On</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    RewriteCond<span class="st"> %{HTTP_COOKIE} !wordpress_logged_in_ [NC]</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    RewriteRule<span class="st"> .* - [R=404,L]</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="fu">&lt;/FilesMatch&gt;</span></span></code></pre></div>
+<p>Test the admin area afterwards with a cleared cache: if the rule is
+wrong, wp-admin loses its stylesheets and scripts.</p>
 <h3 id="does-this-affect-wordpress-rest-api-or-ajax">Does this affect
 WordPress REST API or AJAX?</h3>
 <p><strong>No.</strong> The plugin intelligently detects and allows:</p>
@@ -421,10 +455,10 @@ seconds</li>
 Default: 600 seconds (10 minutes)</li>
 </ul>
 <p>You can also configure these settings via WP-CLI:</p>
-<div class="sourceCode" id="cb13"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection max-attempts 10</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection attempt-window 120</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection block-duration 1800</span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection max-attempts 10</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection attempt-window 120</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="ex">wp</span> jpkcom-hide-login protection block-duration 1800</span></code></pre></div>
 <h3 id="does-this-plugin-modify-core-wordpress-files">Does this plugin
 modify core WordPress files?</h3>
 <p><strong>No.</strong> The plugin uses only WordPress hooks and
@@ -437,15 +471,15 @@ default values in wp-config.php?</h3>
 <p><strong>Yes!</strong> Add these constants to
 <code>wp-config.php</code> (before
 <code>/* That's all, stop editing! */</code>):</p>
-<div class="sourceCode" id="cb14"><pre
-class="sourceCode php"><code class="sourceCode php"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom default login slug</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_DEFAULT_SLUG&#39;</span><span class="ot">,</span> <span class="st">&#39;my-secret-login&#39;</span> )<span class="ot">;</span></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom option name for per-site slug</span></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_OPTION&#39;</span><span class="ot">,</span> <span class="st">&#39;my_custom_login_slug&#39;</span> )<span class="ot">;</span></span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom option name for network slug (Multisite)</span></span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_NETWORK_OPTION&#39;</span><span class="ot">,</span> <span class="st">&#39;my_network_login_slug&#39;</span> )<span class="ot">;</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom default login slug</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_DEFAULT_SLUG&#39;</span><span class="ot">,</span> <span class="st">&#39;my-secret-login&#39;</span> )<span class="ot">;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom option name for per-site slug</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_OPTION&#39;</span><span class="ot">,</span> <span class="st">&#39;my_custom_login_slug&#39;</span> )<span class="ot">;</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Custom option name for network slug (Multisite)</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;JPKCOM_HIDE_LOGIN_NETWORK_OPTION&#39;</span><span class="ot">,</span> <span class="st">&#39;my_network_login_slug&#39;</span> )<span class="ot">;</span></span></code></pre></div>
 <h3 id="will-this-affect-password-reset-emails">Will this affect
 password reset emails?</h3>
 <p><strong>No.</strong> Password reset emails automatically use the
@@ -466,10 +500,10 @@ screen</h4>
 <p>This usually means there’s a PHP error. Check your error logs:</p>
 <ol type="1">
 <li><p>Enable debugging in <code>wp-config.php</code>:</p>
-<div class="sourceCode" id="cb15"><pre
-class="sourceCode php"><code class="sourceCode php"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG&#39;</span><span class="ot">,</span> <span class="kw">true</span> )<span class="ot">;</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG_LOG&#39;</span><span class="ot">,</span> <span class="kw">true</span> )<span class="ot">;</span></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG_DISPLAY&#39;</span><span class="ot">,</span> <span class="kw">false</span> )<span class="ot">;</span></span></code></pre></div></li>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG&#39;</span><span class="ot">,</span> <span class="kw">true</span> )<span class="ot">;</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG_LOG&#39;</span><span class="ot">,</span> <span class="kw">true</span> )<span class="ot">;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>( <span class="st">&#39;WP_DEBUG_DISPLAY&#39;</span><span class="ot">,</span> <span class="kw">false</span> )<span class="ot">;</span></span></code></pre></div></li>
 <li><p>Check <code>/wp-content/debug.log</code> for errors</p></li>
 <li><p>Report any errors to the plugin support</p></li>
 </ol>
@@ -544,14 +578,80 @@ activation</li>
 </ul>
 <hr />
 <h2 id="changelog">Changelog</h2>
-<h3 id="section">1.2.6</h3>
+<h3 id="section">1.2.7</h3>
+<ul>
+<li><strong>Fixed:</strong> a block renewed itself for as long as anyone
+kept trying. A rejected attempt still fired
+<code>wp_login_failed</code>, so the counter grew and
+<code>block_ip()</code> was called again with a fresh full duration —
+the “try again in N minutes” message was untrue and a locked-out
+administrator hitting reload never got back in. Attempts from an already
+blocked IP are no longer counted</li>
+<li><strong>Added:</strong> the settings screen now warns when the
+detected client address is a loopback, private or link-local address and
+no trusted proxy is configured — the case where every visitor shares one
+address (five wrong passwords lock out everybody) or, if that address is
+whitelisted, where the protection is silently off altogether. The notice
+names the <code>JPKCOM_HIDE_LOGIN_TRUSTED_PROXIES</code> line to
+add</li>
+<li><strong>Changed:</strong> the runtime check now requires WordPress
+6.9, matching the <code>Requires at least</code> header, which demanded
+6.9 while the check still let 6.8 through. Both are driven by
+<code>JPKCOM_HIDE_LOGIN_MIN_WP</code> /
+<code>JPKCOM_HIDE_LOGIN_MIN_PHP</code> so they cannot drift apart
+again</li>
+<li><strong>Changed:</strong> cleared every WordPress Plugin Check
+finding except <code>plugin_updater_detected</code>, which is inherent
+to a self-hosted updater — escaping at the point of output, prepared
+statements inline, <code>wp_delete_file()</code> instead of
+<code>unlink()</code>, documented nonce and sanitisation exemptions on
+the request-path parsing that must stay byte-exact</li>
+<li><strong>Removed:</strong> the manual
+<code>load_plugin_textdomain()</code> call. Since WordPress 6.7 the
+textdomain registry loads the plugin’s own <code>/languages</code> just
+in time from the <code>Domain Path</code> header</li>
+<li><strong>Fixed:</strong> the shipped German <code>.l10n.php</code>
+translations stored plural entries as PHP arrays instead of a NUL-joined
+string. WordPress’ translation controller passes that value straight to
+<code>explode()</code>, so on a German site the <em>second</em> failed
+login attempt died with a fatal <code>TypeError</code> — the login page
+returned HTTP 500 and no IP was ever blocked. Both files are regenerated
+with <code>wp i18n make-php</code></li>
+<li><strong>Security:</strong> <code>/wp-signup.php</code> is now
+blocked on single sites too. Core answers it with a redirect to
+<code>wp_registration_url()</code>, which this plugin rewrites to the
+custom slug — so one anonymous request returned the secret login slug in
+the <code>Location</code> header</li>
+<li><strong>Fixed:</strong> the <code>wp_login</code>,
+<code>wp_login_failed</code>, <code>authenticate</code>,
+<code>login_url</code>, <code>logout_url</code>,
+<code>lostpassword_url</code>, <code>logout_redirect</code> and
+<code>site_url</code> callbacks required strictly typed arguments.
+Third-party code that fires these with fewer arguments or a
+<code>null</code> — MainWP Child calls
+<code>do_action( 'wp_login', $user_login )</code> with one argument —
+caused a fatal <code>ArgumentCountError</code> / <code>TypeError</code>.
+All callbacks now accept the foreign shapes and normalise
+internally</li>
+<li><strong>Fixed:</strong> <code>wp jpkcom-hide-login get-slug</code> /
+<code>set-slug</code> did not exist; WP-CLI had registered them as
+<code>get_slug</code> / <code>set_slug</code>. Both are now declared
+with <code>@subcommand</code>, matching the documentation</li>
+<li><strong>Changed:</strong> verbose request tracing moved from
+<code>WP_DEBUG</code> to its own <code>JPKCOM_HIDE_LOGIN_DEBUG</code>
+constant (default off). It used to write ~10 lines per request on any
+<code>WP_DEBUG</code> site, including the request URI and the full
+<code>$_GET</code> of every login attempt — password-reset keys
+included</li>
+</ul>
+<h3 id="section-1">1.2.6</h3>
 <ul>
 <li>Changed: the plugin banners
 (<code>assets/banner-1544x500.avif</code>,
 <code>assets/banner-772x250.avif</code>) are now a plain
 <code>#3c4955</code> surface with no lettering</li>
 </ul>
-<h3 id="section-1">1.2.5</h3>
+<h3 id="section-2">1.2.5</h3>
 <ul>
 <li><strong>Security:</strong> the client IP is now taken from
 <code>REMOTE_ADDR</code>; <code>X-Forwarded-For</code>,
@@ -589,7 +689,7 @@ upgrade</li>
 regression tests for every issue above, each written to fail against the
 previous implementation. Run in CI on every pull request</li>
 </ul>
-<h3 id="section-2">1.2.4</h3>
+<h3 id="section-3">1.2.4</h3>
 <ul>
 <li>Security: update packages are now verified <em>before</em>
 installation — the verified file is handed to WordPress instead of being
@@ -614,14 +714,14 @@ instead of being retried on every admin request</li>
 <li>Added: CI workflow on every pull request (PHP lint, named-argument
 check, YAML validation, action-pinning guard)</li>
 </ul>
-<h3 id="section-3">1.2.3 (2026-06-16)</h3>
+<h3 id="section-4">1.2.3 (2026-06-16)</h3>
 <ul>
 <li>Raised the minimum WordPress version to 6.9 and “Tested up to” to
 WordPress 7.0</li>
 <li>Switched license metadata to the SPDX identifier
 <code>GPL-2.0-or-later</code> with the HTTPS license URI</li>
 </ul>
-<h3 id="section-4">1.2.2 (2026-06-16)</h3>
+<h3 id="section-5">1.2.2 (2026-06-16)</h3>
 <ul>
 <li>Security: updater prefers an exact match against the manifest
 <code>download_url</code> over the slug heuristic, so a tampered
@@ -638,7 +738,7 @@ completing the <code>no_update</code> transient entry
 (<code>new_version</code>, <code>package</code>, <code>tested</code>,
 <code>requires_php</code>)</li>
 </ul>
-<h3 id="section-5">1.2.1 (2026-03-13)</h3>
+<h3 id="section-6">1.2.1 (2026-03-13)</h3>
 <h4 id="fixed">Fixed</h4>
 <ul>
 <li><strong>ZIP-Upload Fix</strong> - Manual ZIP uploads via WP-Admin no
@@ -647,7 +747,7 @@ longer fail with “invalid URL” error during checksum verification</li>
 creates ZIP with top-level plugin folder, ensuring WordPress correctly
 recognizes updates</li>
 </ul>
-<h3 id="section-6">1.2.0 (2025-11-12)</h3>
+<h3 id="section-7">1.2.0 (2025-11-12)</h3>
 <h4 id="added">Added</h4>
 <ul>
 <li><strong>IP Whitelist Management</strong> - Add trusted IPs that will
@@ -676,7 +776,7 @@ via <code>wp jpkcom-hide-login cleanup</code></li>
 management for all plugin features</li>
 </ul>
 <p>…</p>
-<h3 id="section-7">1.0.0 (2024-11-30)</h3>
+<h3 id="section-8">1.0.0 (2024-11-30)</h3>
 <ul>
 <li>Initial Release</li>
 <li>Basic login URL masking</li>

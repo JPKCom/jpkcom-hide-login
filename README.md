@@ -2,8 +2,8 @@
 
 **Plugin Name:** JPKCom Hide Login  
 **Plugin URI:** https://github.com/JPKCom/jpkcom-hide-login  
-**Description:** Rename the WordPress login URL to a custom slug for enhanced security. Includes brute force protection and IP whitelist management.  
-**Version:** 1.2.6  
+**Description:** Rename wp-login.php to a custom slug, with brute force protection and IP whitelist management.  
+**Version:** 1.2.7  
 **Author:** Jean Pierre Kolb <jpk@jpkc.com>  
 **Author URI:** https://www.jpkc.com/  
 **Contributors:** JPKCom  
@@ -12,13 +12,13 @@
 **Tested up to:** 7.0  
 **Requires PHP:** 8.3  
 **Network:** true  
-**Stable tag:** 1.2.6  
+**Stable tag:** 1.2.7  
 **License:** GPL-2.0-or-later  
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html  
 **Text Domain:** jpkcom-hide-login  
 **Domain Path:** /languages
 
-Rename the default WordPress login URL (wp-login.php) to a custom slug for enhanced security with built-in brute force protection and IP management.
+Rename wp-login.php to a custom slug, with brute force protection and IP whitelist management.
 
 ---
 
@@ -285,6 +285,38 @@ They receive a **404 Not Found** error with no indication that the login page ex
 
 After **5 attempts within 60 seconds**, the IP is blocked for **10 minutes** with no further access to the site.
 
+### Are wp-admin/load-scripts.php and load-styles.php still reachable?
+
+Yes, and no plugin can change that. Both files deliberately **do not load WordPress** — they `require` only `noop.php`, `script-loader.php` and `version.php` — so no hook, filter or `init` callback ever runs for them. They are the one pair of wp-admin URLs this plugin cannot mask.
+
+What they leak is modest: a bare request returns an empty 200, and a crafted one serves concatenated WordPress core scripts. Neither reveals the custom login slug or whether an account exists; it only confirms that the site runs WordPress, which the REST API and `/wp-includes/` assets already do.
+
+If you still want them gone, it has to happen in the web server, above PHP. Both files are used **only by wp-admin**, and only when script concatenation is on (`CONCATENATE_SCRIPTS`); the front end never requests them. Restricting them to logged-in sessions is therefore safe:
+
+**nginx**
+
+```nginx
+location ~ ^/wp-admin/load-(scripts|styles)\.php$ {
+    if ($http_cookie !~* "wordpress_logged_in_") {
+        return 404;
+    }
+    include fastcgi_params;
+    fastcgi_pass unix:/run/php/php-fpm.sock;
+}
+```
+
+**Apache (.htaccess in wp-admin/)**
+
+```apache
+<FilesMatch "^load-(scripts|styles)\.php$">
+    RewriteEngine On
+    RewriteCond %{HTTP_COOKIE} !wordpress_logged_in_ [NC]
+    RewriteRule .* - [R=404,L]
+</FilesMatch>
+```
+
+Test the admin area afterwards with a cleared cache: if the rule is wrong, wp-admin loses its stylesheets and scripts.
+
 ### Does this affect WordPress REST API or AJAX?
 
 **No.** The plugin intelligently detects and allows:
@@ -454,6 +486,18 @@ The plugin uses WordPress options and transients:
 ---
 
 ## Changelog
+
+### 1.2.7
+* **Fixed:** a block renewed itself for as long as anyone kept trying. A rejected attempt still fired `wp_login_failed`, so the counter grew and `block_ip()` was called again with a fresh full duration — the "try again in N minutes" message was untrue and a locked-out administrator hitting reload never got back in. Attempts from an already blocked IP are no longer counted
+* **Added:** the settings screen now warns when the detected client address is a loopback, private or link-local address and no trusted proxy is configured — the case where every visitor shares one address (five wrong passwords lock out everybody) or, if that address is whitelisted, where the protection is silently off altogether. The notice names the `JPKCOM_HIDE_LOGIN_TRUSTED_PROXIES` line to add
+* **Changed:** the runtime check now requires WordPress 6.9, matching the `Requires at least` header, which demanded 6.9 while the check still let 6.8 through. Both are driven by `JPKCOM_HIDE_LOGIN_MIN_WP` / `JPKCOM_HIDE_LOGIN_MIN_PHP` so they cannot drift apart again
+* **Changed:** cleared every WordPress Plugin Check finding except `plugin_updater_detected`, which is inherent to a self-hosted updater — escaping at the point of output, prepared statements inline, `wp_delete_file()` instead of `unlink()`, documented nonce and sanitisation exemptions on the request-path parsing that must stay byte-exact
+* **Removed:** the manual `load_plugin_textdomain()` call. Since WordPress 6.7 the textdomain registry loads the plugin's own `/languages` just in time from the `Domain Path` header
+* **Fixed:** the shipped German `.l10n.php` translations stored plural entries as PHP arrays instead of a NUL-joined string. WordPress' translation controller passes that value straight to `explode()`, so on a German site the *second* failed login attempt died with a fatal `TypeError` — the login page returned HTTP 500 and no IP was ever blocked. Both files are regenerated with `wp i18n make-php`
+* **Security:** `/wp-signup.php` is now blocked on single sites too. Core answers it with a redirect to `wp_registration_url()`, which this plugin rewrites to the custom slug — so one anonymous request returned the secret login slug in the `Location` header
+* **Fixed:** the `wp_login`, `wp_login_failed`, `authenticate`, `login_url`, `logout_url`, `lostpassword_url`, `logout_redirect` and `site_url` callbacks required strictly typed arguments. Third-party code that fires these with fewer arguments or a `null` — MainWP Child calls `do_action( 'wp_login', $user_login )` with one argument — caused a fatal `ArgumentCountError` / `TypeError`. All callbacks now accept the foreign shapes and normalise internally
+* **Fixed:** `wp jpkcom-hide-login get-slug` / `set-slug` did not exist; WP-CLI had registered them as `get_slug` / `set_slug`. Both are now declared with `@subcommand`, matching the documentation
+* **Changed:** verbose request tracing moved from `WP_DEBUG` to its own `JPKCOM_HIDE_LOGIN_DEBUG` constant (default off). It used to write ~10 lines per request on any `WP_DEBUG` site, including the request URI and the full `$_GET` of every login attempt — password-reset keys included
 
 ### 1.2.6
 * Changed: the plugin banners (`assets/banner-1544x500.avif`, `assets/banner-772x250.avif`) are now a plain `#3c4955` surface with no lettering

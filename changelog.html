@@ -1,11 +1,77 @@
-<h3 id="section">1.2.6</h3>
+<h3 id="section">1.2.7</h3>
+<ul>
+<li><strong>Fixed:</strong> a block renewed itself for as long as anyone
+kept trying. A rejected attempt still fired
+<code>wp_login_failed</code>, so the counter grew and
+<code>block_ip()</code> was called again with a fresh full duration —
+the “try again in N minutes” message was untrue and a locked-out
+administrator hitting reload never got back in. Attempts from an already
+blocked IP are no longer counted</li>
+<li><strong>Added:</strong> the settings screen now warns when the
+detected client address is a loopback, private or link-local address and
+no trusted proxy is configured — the case where every visitor shares one
+address (five wrong passwords lock out everybody) or, if that address is
+whitelisted, where the protection is silently off altogether. The notice
+names the <code>JPKCOM_HIDE_LOGIN_TRUSTED_PROXIES</code> line to
+add</li>
+<li><strong>Changed:</strong> the runtime check now requires WordPress
+6.9, matching the <code>Requires at least</code> header, which demanded
+6.9 while the check still let 6.8 through. Both are driven by
+<code>JPKCOM_HIDE_LOGIN_MIN_WP</code> /
+<code>JPKCOM_HIDE_LOGIN_MIN_PHP</code> so they cannot drift apart
+again</li>
+<li><strong>Changed:</strong> cleared every WordPress Plugin Check
+finding except <code>plugin_updater_detected</code>, which is inherent
+to a self-hosted updater — escaping at the point of output, prepared
+statements inline, <code>wp_delete_file()</code> instead of
+<code>unlink()</code>, documented nonce and sanitisation exemptions on
+the request-path parsing that must stay byte-exact</li>
+<li><strong>Removed:</strong> the manual
+<code>load_plugin_textdomain()</code> call. Since WordPress 6.7 the
+textdomain registry loads the plugin’s own <code>/languages</code> just
+in time from the <code>Domain Path</code> header</li>
+<li><strong>Fixed:</strong> the shipped German <code>.l10n.php</code>
+translations stored plural entries as PHP arrays instead of a NUL-joined
+string. WordPress’ translation controller passes that value straight to
+<code>explode()</code>, so on a German site the <em>second</em> failed
+login attempt died with a fatal <code>TypeError</code> — the login page
+returned HTTP 500 and no IP was ever blocked. Both files are regenerated
+with <code>wp i18n make-php</code></li>
+<li><strong>Security:</strong> <code>/wp-signup.php</code> is now
+blocked on single sites too. Core answers it with a redirect to
+<code>wp_registration_url()</code>, which this plugin rewrites to the
+custom slug — so one anonymous request returned the secret login slug in
+the <code>Location</code> header</li>
+<li><strong>Fixed:</strong> the <code>wp_login</code>,
+<code>wp_login_failed</code>, <code>authenticate</code>,
+<code>login_url</code>, <code>logout_url</code>,
+<code>lostpassword_url</code>, <code>logout_redirect</code> and
+<code>site_url</code> callbacks required strictly typed arguments.
+Third-party code that fires these with fewer arguments or a
+<code>null</code> — MainWP Child calls
+<code>do_action( 'wp_login', $user_login )</code> with one argument —
+caused a fatal <code>ArgumentCountError</code> / <code>TypeError</code>.
+All callbacks now accept the foreign shapes and normalise
+internally</li>
+<li><strong>Fixed:</strong> <code>wp jpkcom-hide-login get-slug</code> /
+<code>set-slug</code> did not exist; WP-CLI had registered them as
+<code>get_slug</code> / <code>set_slug</code>. Both are now declared
+with <code>@subcommand</code>, matching the documentation</li>
+<li><strong>Changed:</strong> verbose request tracing moved from
+<code>WP_DEBUG</code> to its own <code>JPKCOM_HIDE_LOGIN_DEBUG</code>
+constant (default off). It used to write ~10 lines per request on any
+<code>WP_DEBUG</code> site, including the request URI and the full
+<code>$_GET</code> of every login attempt — password-reset keys
+included</li>
+</ul>
+<h3 id="section-1">1.2.6</h3>
 <ul>
 <li>Changed: the plugin banners
 (<code>assets/banner-1544x500.avif</code>,
 <code>assets/banner-772x250.avif</code>) are now a plain
 <code>#3c4955</code> surface with no lettering</li>
 </ul>
-<h3 id="section-1">1.2.5</h3>
+<h3 id="section-2">1.2.5</h3>
 <ul>
 <li><strong>Security:</strong> the client IP is now taken from
 <code>REMOTE_ADDR</code>; <code>X-Forwarded-For</code>,
@@ -43,7 +109,7 @@ upgrade</li>
 regression tests for every issue above, each written to fail against the
 previous implementation. Run in CI on every pull request</li>
 </ul>
-<h3 id="section-2">1.2.4</h3>
+<h3 id="section-3">1.2.4</h3>
 <ul>
 <li>Security: update packages are now verified <em>before</em>
 installation — the verified file is handed to WordPress instead of being
@@ -68,14 +134,14 @@ instead of being retried on every admin request</li>
 <li>Added: CI workflow on every pull request (PHP lint, named-argument
 check, YAML validation, action-pinning guard)</li>
 </ul>
-<h3 id="section-3">1.2.3 (2026-06-16)</h3>
+<h3 id="section-4">1.2.3 (2026-06-16)</h3>
 <ul>
 <li>Raised the minimum WordPress version to 6.9 and “Tested up to” to
 WordPress 7.0</li>
 <li>Switched license metadata to the SPDX identifier
 <code>GPL-2.0-or-later</code> with the HTTPS license URI</li>
 </ul>
-<h3 id="section-4">1.2.2 (2026-06-16)</h3>
+<h3 id="section-5">1.2.2 (2026-06-16)</h3>
 <ul>
 <li>Security: updater prefers an exact match against the manifest
 <code>download_url</code> over the slug heuristic, so a tampered
@@ -92,7 +158,7 @@ completing the <code>no_update</code> transient entry
 (<code>new_version</code>, <code>package</code>, <code>tested</code>,
 <code>requires_php</code>)</li>
 </ul>
-<h3 id="section-5">1.2.1 (2026-03-13)</h3>
+<h3 id="section-6">1.2.1 (2026-03-13)</h3>
 <h4 id="fixed">Fixed</h4>
 <ul>
 <li><strong>ZIP-Upload Fix</strong> - Manual ZIP uploads via WP-Admin no
@@ -101,7 +167,7 @@ longer fail with “invalid URL” error during checksum verification</li>
 creates ZIP with top-level plugin folder, ensuring WordPress correctly
 recognizes updates</li>
 </ul>
-<h3 id="section-6">1.2.0 (2025-11-12)</h3>
+<h3 id="section-7">1.2.0 (2025-11-12)</h3>
 <h4 id="added">Added</h4>
 <ul>
 <li><strong>IP Whitelist Management</strong> - Add trusted IPs that will
@@ -130,7 +196,7 @@ via <code>wp jpkcom-hide-login cleanup</code></li>
 management for all plugin features</li>
 </ul>
 <p>…</p>
-<h3 id="section-7">1.0.0 (2024-11-30)</h3>
+<h3 id="section-8">1.0.0 (2024-11-30)</h3>
 <ul>
 <li>Initial Release</li>
 <li>Basic login URL masking</li>
