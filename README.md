@@ -3,7 +3,7 @@
 **Plugin Name:** JPKCom Hide Login  
 **Plugin URI:** https://github.com/JPKCom/jpkcom-hide-login  
 **Description:** Rename the WordPress login URL to a custom slug for enhanced security. Includes brute force protection and IP whitelist management.  
-**Version:** 1.2.5  
+**Version:** 1.2.6  
 **Author:** Jean Pierre Kolb <jpk@jpkc.com>  
 **Author URI:** https://www.jpkc.com/  
 **Contributors:** JPKCom  
@@ -12,7 +12,7 @@
 **Tested up to:** 7.0  
 **Requires PHP:** 8.3  
 **Network:** true  
-**Stable tag:** 1.2.5  
+**Stable tag:** 1.2.6  
 **License:** GPL-2.0-or-later  
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html  
 **Text Domain:** jpkcom-hide-login  
@@ -454,6 +454,9 @@ The plugin uses WordPress options and transients:
 ---
 
 ## Changelog
+
+### 1.2.6
+* Changed: the plugin banners (`assets/banner-1544x500.avif`, `assets/banner-772x250.avif`) are now a plain `#3c4955` surface with no lettering
 
 ### 1.2.5
 * **Security:** the client IP is now taken from `REMOTE_ADDR`; `X-Forwarded-For`, `CF-Connecting-IP` and `X-Real-IP` are only believed when the request arrives from a proxy declared via `JPKCOM_HIDE_LOGIN_TRUSTED_PROXIES` or the `jpkcom_hide_login_trusted_proxies` filter. Previously a single spoofed header made the plugin see a whitelisted address, which disabled both the wp-login.php block and the brute-force protection, and allowed an attacker to get someone else's address blocked
