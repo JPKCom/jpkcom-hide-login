@@ -3,16 +3,16 @@
 **Plugin Name:** JPKCom Hide Login  
 **Plugin URI:** https://github.com/JPKCom/jpkcom-hide-login  
 **Description:** Rename wp-login.php to a custom slug, with brute force protection and IP whitelist management.  
-**Version:** 1.2.7  
+**Version:** 1.2.8  
 **Author:** Jean Pierre Kolb <jpk@jpkc.com>  
 **Author URI:** https://www.jpkc.com/  
 **Contributors:** JPKCom  
 **Tags:** Login, Security, Brute Force Protection, Hide Login, Custom Login URL  
 **Requires at least:** 6.9  
-**Tested up to:** 7.0  
+**Tested up to:** 7.1  
 **Requires PHP:** 8.3  
 **Network:** true  
-**Stable tag:** 1.2.7  
+**Stable tag:** 1.2.8  
 **License:** GPL-2.0-or-later  
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html  
 **Text Domain:** jpkcom-hide-login  
@@ -479,13 +479,19 @@ The plugin uses WordPress options and transients:
 
 #### WordPress Compatibility
 
-- **WordPress 6.8+** - Tested with latest WordPress versions
+- **WordPress 6.9+** - Tested with latest WordPress versions
 - **Multisite** - Full support for network activation
 - **WooCommerce** - Compatible with WooCommerce 8.0+
 
 ---
 
 ## Changelog
+
+### 1.2.8
+* Changed: `Tested up to` raised to WordPress 7.1
+* Changed: the bundled updater's runtime floor now matches the plugin's own minimum. It bailed out below WordPress 6.8 while the plugin header has required 6.9 for several releases, so the check could never fire on a supported installation
+* Docs: the remaining "WordPress 6.8" requirement statements now say 6.9, matching the plugin header
+* CI: the release manifest's fallback values for `requires` and `tested` now say 6.9 and 7.1. They only apply when the README metadata cannot be read, but a stale fallback would have published a minimum the plugin no longer supports
 
 ### 1.2.7
 * **Fixed:** a block renewed itself for as long as anyone kept trying. A rejected attempt still fired `wp_login_failed`, so the counter grew and `block_ip()` was called again with a fresh full duration — the "try again in N minutes" message was untrue and a locked-out administrator hitting reload never got back in. Attempts from an already blocked IP are no longer counted
