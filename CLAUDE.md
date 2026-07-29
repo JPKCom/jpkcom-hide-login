@@ -567,7 +567,7 @@ Add filters in `JPKCom_Hide_Login_Mask_Login::init_hooks()` method
 
 Check PHP error log for errors. Common causes:
 - PHP version < 8.3
-- WordPress version < 6.8
+- WordPress version < 6.9
 - Memory limit too low
 - Plugin conflict
 
