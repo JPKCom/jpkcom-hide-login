@@ -352,21 +352,6 @@ Self-hosted GitHub-based update system:
 - The verified temp file is returned from `upgrader_pre_download`, so WordPress installs exactly the bytes that were hashed (no second download)
 - Manifest URL: `https://jpkcom.github.io/jpkcom-hide-login/plugin_jpkcom-hide-login.json`
 
-**Supply-chain: GitHub Actions sind auf Commit-SHAs gepinnt.** Alle `uses:`-Zeilen in `.github/workflows/` referenzieren einen 40-stelligen Commit-SHA statt eines Tags (`@v4`), mit der Version als Kommentar dahinter. Grund: ein Tag ist ein beweglicher Zeiger und lässt sich umhängen, ein SHA nicht. Da dieser Workflow die Plugin-ZIP **und** die SHA256-Summe erzeugt, der der Auto-Updater vertraut, würde eine kompromittierte Action ein manipuliertes ZIP samt passender Prüfsumme ausliefern — die Prüfsumme sichert den Transportweg, das Pinning den Build. `.github/dependabot.yml` hält die Pins wöchentlich aktuell (ein gesammelter PR). Beim Aktualisieren immer SHA *und* Versionskommentar zusammen ändern.
-
-**CI & Dependabot-Auto-Merge.** Zwei zusätzliche Workflows:
-
-- `.github/workflows/ci.yml` — läuft auf jedem `pull_request`. Prüft: `php -l` über alle PHP-Dateien; ungültige benannte Argumente an internen PHP-Funktionen (fängt die Klasse `sprintf(format:, values:)` → `ArgumentCountError`, die `php -l` nicht sieht); YAML-Validität aller `.github`-Dateien; und dass jede Action auf einem 40-stelligen Commit-SHA gepinnt ist (beide YAML-Formen, `uses:` und `- uses:`).
-- `.github/workflows/dependabot-auto-merge.yml` — merged Dependabot-PRs automatisch, aber nur `semver-patch` und `semver-minor`. Major-Updates bekommen stattdessen einen Kommentar und bleiben manuell. Greift nur bei PRs von `dependabot[bot]` aus diesem Repo, nie aus Forks.
-
-> **Zwei Repo-Einstellungen sind Voraussetzung, sonst ist der Auto-Merge wirkungslos oder gefährlich:**
-> 1. **„Allow auto-merge"** muss in den Repo-Settings aktiv sein.
-> 2. Der Branch-Schutz muss den CI-Job als **Required status check** führen (`CI / Lint & Guards`). Fehlt das, merged `gh pr merge --auto` **sofort** — es gibt dann nichts, worauf es warten müsste, und die CI wäre reine Dekoration.
-
-Zusammen mit `cooldown: default-days: 7` in der `dependabot.yml` heißt das: kein Action-Release wird in seiner ersten Woche übernommen, patch/minor laufen danach automatisch durch (sofern CI grün), major bleibt eine bewusste Entscheidung.
-
-
-
 ## Development Commands
 
 ### Testing the Plugin
@@ -383,19 +368,20 @@ ln -s /path/to/jpkcom-hide-login /path/to/wordpress/wp-content/plugins/
 
 ### Build & Release
 
-The plugin uses GitHub Actions for automated releases:
+Bump the version everywhere (header `Version:` and `Stable tag:`, `JPKCOM_HIDE_LOGIN_VERSION`, and `README.md` incl. a new changelog block — this plugin has no `phpdoc.xml`), commit, then push a `v*` tag. That tag push is the only trigger, and `.github/workflows/release.yml` creates the GitHub release itself:
 
 ```bash
-# Create a new release (triggers .github/workflows/release.yml)
-git tag -a v1.1.0 -m "Release version 1.1.0"
-git push origin v1.1.0
+git tag -a v1.2.9 -m "Release version 1.2.9"
+git push origin v1.2.9
 ```
 
-The release workflow automatically:
-1. Builds plugin ZIP (excluding .git, .github, .gitignore)
-2. Uploads ZIP to GitHub release
-3. Generates JSON manifest from README.md metadata
-4. Deploys manifest + documentation to GitHub Pages
+Pipeline: README metadata via Pandoc → slug-named ZIP (excludes `.git`, `.github`, `CLAUDE.md`, `tests`, `tools`, `docs`, build artefacts) → SHA256 → upload ZIP + `.sha256` → `plugin_jpkcom-hide-login.json` manifest → deploy to `gh-pages`. Unlike the other JPKCom plugins this repo has no phpDocumentor step. ZIP and manifest must come from the same run, since the manifest's `checksum_sha256` is what the updater verifies.
+
+**Actions are pinned to commit SHAs.** Every `uses:` line in `.github/workflows/` references a 40-character commit SHA instead of a tag (`@v4`), with the version as a trailing comment. A tag is a movable pointer and can be repointed; a SHA cannot. Since the release workflow builds the plugin ZIP **and** the SHA256 checksum the auto-updater trusts, a compromised action would ship a tampered ZIP together with a matching checksum — the checksum secures the transport, the pinning secures the build. `.github/dependabot.yml` keeps the pins current weekly in one combined PR; when updating, always change the SHA *and* the version comment together.
+
+**CI** (`.github/workflows/ci.yml`) runs on every pull request *and* on every push to `main` — a required status check only covers pull requests, so a direct push with bypass rights would otherwise skip the checks entirely. It runs `php -l` over all PHP files; flags invalid named arguments to internal PHP functions (catches `sprintf(format:, values:)` → `ArgumentCountError`, which `php -l` does not see); validates the YAML of every `.github` file; asserts every action is pinned to a 40-character commit SHA; and executes `tests/test-*.php` where present.
+
+**Dependabot auto-merge** (`.github/workflows/dependabot-auto-merge.yml`) merges only `semver-patch` and `semver-minor`, and only PRs from `dependabot[bot]` in this repo — never from forks. Major updates get a comment and stay manual. Two repo settings are prerequisites, otherwise this is useless or outright dangerous: "Allow auto-merge" must be enabled, and branch protection must list `CI / Lint & Guards` as a **required status check** — without it `gh pr merge --auto` merges *immediately*, since there is nothing left to wait for. Together with `cooldown: default-days: 7` no action release is adopted during its first week.
 
 ### WP-CLI Testing (if available)
 
@@ -658,7 +644,4 @@ Rename plugin folder via FTP:
 
 ## Version History
 
-- **1.2.7** (2026-07-28) - Fixed the malformed `.l10n.php` plural entries (fatal 500 on the second failed login on German sites), blocked `wp-signup.php` on single sites (it disclosed the secret slug via `wp_registration_url()`), stopped blocks renewing themselves on every retry, made all hook callbacks tolerate foreign argument shapes, added the reverse-proxy warning to the settings screen, aligned the runtime version check with the header, registered the `get-slug` / `set-slug` WP-CLI subcommands, moved request tracing to `JPKCOM_HIDE_LOGIN_DEBUG`, cleared all Plugin Check findings
-- **1.2.0** (2025-11-12) - Added customizable brute force thresholds, WP-CLI commands for management, automatic database cleanup via WordPress Cron
-- **1.1.0** (2025-11-02) - Complete rewrite with modular architecture, IP whitelist, enhanced brute force protection
-- **1.0.0** (2024-10-01) - Initial release
+Maintained in `README.md` under `## Changelog` — that section is also the source for the release manifest, so it is the single place to update.
