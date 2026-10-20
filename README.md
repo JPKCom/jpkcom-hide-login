@@ -39,7 +39,7 @@ Rename wp-login.php to a custom slug, with brute force protection and IP whiteli
 - **REST API Safe** - Does not interfere with REST API or AJAX requests
 - **No Core File Modifications** - Uses only WordPress filters and hooks
 - **Fully Translatable** - Ready for translation (Text Domain: `jpkcom-hide-login`)
-- **Clean Uninstall** - Completely reversible, no database pollution
+- **Reversible** - Deactivating restores WordPress' default login; the settings stay in the database, so a reactivation picks them up again
 
 ### How It Works
 
@@ -472,7 +472,7 @@ The plugin uses WordPress options and transients:
 **Automatic Cleanup:**
 - Expired login attempt transients are automatically cleaned up daily via WordPress Cron
 - Manual cleanup available via WP-CLI: `wp jpkcom-hide-login cleanup`
-- All data is removed on plugin deactivation
+- Deactivation only unschedules the cleanup cron event; options and transients stay in the database (there is no uninstall routine)
 
 #### PHP Requirements
 
