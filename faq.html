@@ -235,8 +235,9 @@ Failed login attempt counters per IP</p>
 <p><strong>Automatic Cleanup:</strong> - Expired login attempt
 transients are automatically cleaned up daily via WordPress Cron -
 Manual cleanup available via WP-CLI:
-<code>wp jpkcom-hide-login cleanup</code> - All data is removed on
-plugin deactivation</p>
+<code>wp jpkcom-hide-login cleanup</code> - Deactivation only
+unschedules the cleanup cron event; options and transients stay in the
+database (there is no uninstall routine)</p>
 <h4 id="php-requirements">PHP Requirements</h4>
 <ul>
 <li><strong>PHP 8.3+</strong></li>

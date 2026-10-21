@@ -3,7 +3,7 @@
 **Plugin Name:** JPKCom Hide Login  
 **Plugin URI:** https://github.com/JPKCom/jpkcom-hide-login  
 **Description:** Rename wp-login.php to a custom slug, with brute force protection and IP whitelist management.  
-**Version:** 1.2.10  
+**Version:** 1.2.11  
 **Author:** Jean Pierre Kolb <jpk@jpkc.com>  
 **Author URI:** https://www.jpkc.com/  
 **Contributors:** JPKCom  
@@ -12,7 +12,7 @@
 **Tested up to:** 7.1  
 **Requires PHP:** 8.3  
 **Network:** true  
-**Stable tag:** 1.2.10  
+**Stable tag:** 1.2.11  
 **License:** GPL-2.0-or-later  
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html  
 **Text Domain:** jpkcom-hide-login  
@@ -39,7 +39,7 @@ Rename wp-login.php to a custom slug, with brute force protection and IP whiteli
 - **REST API Safe** - Does not interfere with REST API or AJAX requests
 - **No Core File Modifications** - Uses only WordPress filters and hooks
 - **Fully Translatable** - Ready for translation (Text Domain: `jpkcom-hide-login`)
-- **Clean Uninstall** - Completely reversible, no database pollution
+- **Reversible** - Deactivating restores WordPress' default login; the settings stay in the database, so a reactivation picks them up again
 
 ### How It Works
 
@@ -472,7 +472,7 @@ The plugin uses WordPress options and transients:
 **Automatic Cleanup:**
 - Expired login attempt transients are automatically cleaned up daily via WordPress Cron
 - Manual cleanup available via WP-CLI: `wp jpkcom-hide-login cleanup`
-- All data is removed on plugin deactivation
+- Deactivation only unschedules the cleanup cron event; options and transients stay in the database (there is no uninstall routine)
 
 #### PHP Requirements
 
@@ -487,6 +487,9 @@ The plugin uses WordPress options and transients:
 ---
 
 ## Changelog
+
+### 1.2.11
+* Added: a plugin icon. The update manifest now points WordPress to the JPKCom logo, so the Updates screen (Dashboard → Updates) shows it next to this plugin instead of the generic pattern wordpress.org generates from the slug
 
 ### 1.2.10
 * Security: the plugin header now carries `Update URI: https://github.com/JPKCom/jpkcom-hide-login`. Without it, WordPress also asks wordpress.org for updates under this plugin's slug, so a same-named plugin published there with a higher version would be offered as an update of this one. With the header, wordpress.org answers nothing for this plugin and updates come only from this repository
