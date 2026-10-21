@@ -1,11 +1,34 @@
-<h3 id="section">1.2.11</h3>
+<h3 id="section">1.2.12</h3>
+<ul>
+<li>Added: updates for inactive JPKCom plugins. WordPress never runs the
+code of a deactivated plugin, so its own updater never ran and it was
+never offered an update. Every JPKCom plugin now ships updater 1.5.0;
+one copy answers for all installed JPKCom plugins, active or not, with
+the update row, the icon and “View details”. The SHA-256 check applies
+to an inactive plugin exactly as to an active one. On multisite, at
+least one JPKCom plugin must be network-active or active on the main
+site</li>
+<li>Security: the stored list of plugin updates no longer contains
+JPKCom download URLs; they are added back only while a JPKCom updater is
+loaded, so a request without one cannot install an unverified package.
+The checksum check now also verifies a package another plugin supplied
+instead of accepting it, and recognises every GitHub address of a
+release file</li>
+<li>Changed: plugins installed as a Git (or other version-control)
+checkout or in a renamed folder are told about a new release but never
+updated automatically, because an update would delete the checkout or
+the renamed folder. Update information is fetched only for users who can
+update plugins, in WordPress’s update cron and in WP-CLI, never for
+anonymous visitors</li>
+</ul>
+<h3 id="section-1">1.2.11</h3>
 <ul>
 <li>Added: a plugin icon. The update manifest now points WordPress to
 the JPKCom logo, so the Updates screen (Dashboard → Updates) shows it
 next to this plugin instead of the generic pattern wordpress.org
 generates from the slug</li>
 </ul>
-<h3 id="section-1">1.2.10</h3>
+<h3 id="section-2">1.2.10</h3>
 <ul>
 <li>Security: the plugin header now carries
 <code>Update URI: https://github.com/JPKCom/jpkcom-hide-login</code>.
@@ -20,7 +43,7 @@ fetches the manifest once instead of once per site; on a single site
 nothing changes. The old per-site entries expire on their own within a
 day</li>
 </ul>
-<h3 id="section-2">1.2.9</h3>
+<h3 id="section-3">1.2.9</h3>
 <ul>
 <li>Changed: the update manifest generator now defaults a missing
 <code>Network:</code> header to false instead of true, matching
@@ -34,7 +57,7 @@ repository are now English throughout, and the developer notes in
 <code>CLAUDE.md</code> were translated and trimmed. No effect on the
 shipped plugin</li>
 </ul>
-<h3 id="section-3">1.2.8</h3>
+<h3 id="section-4">1.2.8</h3>
 <ul>
 <li>Changed: <code>Tested up to</code> raised to WordPress 7.1</li>
 <li>Changed: the bundled updater’s runtime floor now matches the
@@ -48,7 +71,7 @@ and <code>tested</code> now say 6.9 and 7.1. They only apply when the
 README metadata cannot be read, but a stale fallback would have
 published a minimum the plugin no longer supports</li>
 </ul>
-<h3 id="section-4">1.2.7</h3>
+<h3 id="section-5">1.2.7</h3>
 <ul>
 <li><strong>Fixed:</strong> a block renewed itself for as long as anyone
 kept trying. A rejected attempt still fired
@@ -114,14 +137,14 @@ constant (default off). It used to write ~10 lines per request on any
 <code>$_GET</code> of every login attempt — password-reset keys
 included</li>
 </ul>
-<h3 id="section-5">1.2.6</h3>
+<h3 id="section-6">1.2.6</h3>
 <ul>
 <li>Changed: the plugin banners
 (<code>assets/banner-1544x500.avif</code>,
 <code>assets/banner-772x250.avif</code>) are now a plain
 <code>#3c4955</code> surface with no lettering</li>
 </ul>
-<h3 id="section-6">1.2.5</h3>
+<h3 id="section-7">1.2.5</h3>
 <ul>
 <li><strong>Security:</strong> the client IP is now taken from
 <code>REMOTE_ADDR</code>; <code>X-Forwarded-For</code>,
@@ -159,7 +182,7 @@ upgrade</li>
 regression tests for every issue above, each written to fail against the
 previous implementation. Run in CI on every pull request</li>
 </ul>
-<h3 id="section-7">1.2.4</h3>
+<h3 id="section-8">1.2.4</h3>
 <ul>
 <li>Security: update packages are now verified <em>before</em>
 installation — the verified file is handed to WordPress instead of being
@@ -184,14 +207,14 @@ instead of being retried on every admin request</li>
 <li>Added: CI workflow on every pull request (PHP lint, named-argument
 check, YAML validation, action-pinning guard)</li>
 </ul>
-<h3 id="section-8">1.2.3 (2026-06-16)</h3>
+<h3 id="section-9">1.2.3 (2026-06-16)</h3>
 <ul>
 <li>Raised the minimum WordPress version to 6.9 and “Tested up to” to
 WordPress 7.0</li>
 <li>Switched license metadata to the SPDX identifier
 <code>GPL-2.0-or-later</code> with the HTTPS license URI</li>
 </ul>
-<h3 id="section-9">1.2.2 (2026-06-16)</h3>
+<h3 id="section-10">1.2.2 (2026-06-16)</h3>
 <ul>
 <li>Security: updater prefers an exact match against the manifest
 <code>download_url</code> over the slug heuristic, so a tampered
@@ -208,7 +231,7 @@ completing the <code>no_update</code> transient entry
 (<code>new_version</code>, <code>package</code>, <code>tested</code>,
 <code>requires_php</code>)</li>
 </ul>
-<h3 id="section-10">1.2.1 (2026-03-13)</h3>
+<h3 id="section-11">1.2.1 (2026-03-13)</h3>
 <h4 id="fixed">Fixed</h4>
 <ul>
 <li><strong>ZIP-Upload Fix</strong> - Manual ZIP uploads via WP-Admin no
@@ -217,7 +240,7 @@ longer fail with “invalid URL” error during checksum verification</li>
 creates ZIP with top-level plugin folder, ensuring WordPress correctly
 recognizes updates</li>
 </ul>
-<h3 id="section-11">1.2.0 (2025-11-12)</h3>
+<h3 id="section-12">1.2.0 (2025-11-12)</h3>
 <h4 id="added">Added</h4>
 <ul>
 <li><strong>IP Whitelist Management</strong> - Add trusted IPs that will
@@ -246,7 +269,7 @@ via <code>wp jpkcom-hide-login cleanup</code></li>
 management for all plugin features</li>
 </ul>
 <p>…</p>
-<h3 id="section-12">1.0.0 (2024-11-30)</h3>
+<h3 id="section-13">1.0.0 (2024-11-30)</h3>
 <ul>
 <li>Initial Release</li>
 <li>Basic login URL masking</li>
