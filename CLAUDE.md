@@ -46,7 +46,7 @@ jpkcom-hide-login/
 - Multisite network admin menu and settings page (lines 260-344)
 
 **Constants:**
-- `JPKCOM_HIDE_LOGIN_VERSION` - Plugin version (1.2.7)
+- `JPKCOM_HIDE_LOGIN_VERSION` - Plugin version (matches the header `Version:`)
 - `JPKCOM_HIDE_LOGIN_DEBUG` - Verbose request tracing, default `false`. Deliberately *not* `WP_DEBUG`: the mask runs on `init` for every request, so tying tracing to `WP_DEBUG` wrote ~10 lines per request into every dev/staging log.
 - `JPKCOM_HIDE_LOGIN_OPTION` - Per-site option name
 - `JPKCOM_HIDE_LOGIN_DEFAULT_SLUG` - Default slug ('jpkcom-login')
@@ -276,7 +276,7 @@ The function `jpkcom_hide_login_get_slug()` resolves slugs with this priority:
 - `filter_wp_redirect()` rewrites `wp-login.php` to the custom slug only while serving the masked login page or for an authenticated request. An anonymous probe that provokes such a redirect must not receive the secret slug in the `Location` header.
 
 **Regression tests:**
-- `tests/test-security.php` covers all of the above and is written so each case fails against the pre-1.2.5 implementation. Run with `php tests/test-security.php`; CI runs it on every pull request. `tests/` is excluded from the release ZIP.
+- `tests/test-security.php` covers all of the above and is written so each case fails against the pre-1.2.5 implementation. `tests/test-updater-pin.php` keeps the updater the unmodified family copy (see Plugin Updater). Run all with `for t in tests/test-*.php; do php "$t"; done`; CI runs every `tests/test-*.php` on each pull request and push to `main`. `tests/` is excluded from the release ZIP.
 
 **Transient Expiration & Cleanup:**
 - Blocked IPs automatically expire via WordPress transients
@@ -342,6 +342,8 @@ All files use `declare(strict_types=1);` and type hints on all methods.
 - `jpkcom_hide_login_attempts_{hash}` - Integer, failed attempt counter per IP
 
 ### Plugin Updater (includes/class-plugin-updater.php)
+
+**This file is the unmodified family copy - never patch it here.** It is identical to every other JPKCom plugin's copy modulo namespace (`JPKComHideLoginGitUpdate`) and slug; upstream is `jpkcom-post-filter`. Regenerate it from there with a namespace/slug replacement, never edit it in place. From 1.2.7 to 1.2.12 this copy did differ: its logging went through `jpkcom_hide_login_log()` instead of `error_log()` (presumably for Plugin Check), was carried into updater 1.5.0 by hand, and every family release needed an extra manual step for this plugin alone. Since 1.2.13 it is the family copy again and logs like every sibling (`error_log( 'JPKCom Plugin Updater: …' )` under `WP_DEBUG`). Plugin Check reports that `error_log()` call - accepted, as in the other family plugins; the README claim from 1.2.7 ("every Plugin Check finding except `plugin_updater_detected`") no longer covers the updater. Guarded by `tests/test-updater-pin.php`, which pins the family's normalised SHA256 (the same value `jpkcom-harden-trim` pins) and compares with a `jpkcom-allow-blocks` checkout when one sits next to this repo (the same reference `jpkcom-harden-trim` uses; every family copy is identical by definition, and edits still start upstream in `jpkcom-post-filter`). `jpkcom_hide_login_log()` remains the logging path for the plugin's own code.
 
 **Family updates (updater 1.5.0).** WordPress only runs the code of active plugins, so the updater copy inside an inactive JPKCom plugin never runs and that plugin was never offered an update. Since 1.5.0 every copy registers in a shared registry (`$GLOBALS['jpkcom_git_updater_registry']`); the copy with the highest `UPDATER_VERSION` is elected leader (ties: the first registered) and serves every installed JPKCom plugin, active or inactive. A plugin counts as JPKCom when its Plugin URI is `https://github.com/JPKCom/<slug>` and it sits in the canonical `<slug>/<slug>.php` layout. The leader provides the update rows with icons, "View details" and the SHA-256 gate (`upgrader_pre_download` at priority `PHP_INT_MAX - 100`, which also hashes a package an earlier filter supplied instead of trusting it). All other 1.5+ copies stay passive; a plugin whose pre-1.5 copy is loaded keeps serving itself and the leader leaves it alone.
 - Package URLs are removed before the update transient is stored (`pre_set_site_transient_update_plugins`) and re-injected on read. A request in which no 1.5+ copy is loaded therefore finds an empty package and core refuses the update ("Update package not available") instead of installing an unverified ZIP.

@@ -3,7 +3,7 @@
 Plugin Name: JPKCom Hide Login
 Plugin URI: https://github.com/JPKCom/jpkcom-hide-login
 Description: Rename wp-login.php to a custom slug, with brute force protection and IP whitelist management.
-Version: 1.2.12
+Version: 1.2.13
 Author: Jean Pierre Kolb <jpk@jpkc.com>
 Author URI: https://www.jpkc.com/
 Contributors: JPKCom
@@ -12,7 +12,7 @@ Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.3
 Network: true
-Stable tag: 1.2.12
+Stable tag: 1.2.13
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: jpkcom-hide-login
@@ -30,7 +30,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Plugin Constants
  */
 if ( ! defined( 'JPKCOM_HIDE_LOGIN_VERSION' ) ) {
-	define( 'JPKCOM_HIDE_LOGIN_VERSION', '1.2.12' );
+	define( 'JPKCOM_HIDE_LOGIN_VERSION', '1.2.13' );
 }
 
 if ( ! defined( 'JPKCOM_HIDE_LOGIN_OPTION' ) ) {
@@ -91,18 +91,19 @@ if ( ! defined( 'JPKCOM_HIDE_LOGIN_DEBUG' ) ) {
 }
 
 /**
- * Write a diagnostic message to the PHP error log.
+ * Write a diagnostic message of this plugin's own code to the PHP error log.
  *
  * Two levels, because they answer different questions:
  *
  * - `trace` is the per-request chatter of the login mask and needs
  *   `JPKCOM_HIDE_LOGIN_DEBUG`. It is far too loud for `WP_DEBUG`, which every
  *   development site has switched on.
- * - `error` is something that actually went wrong (a failed update, a rejected
- *   package) and follows `WP_DEBUG`, so it surfaces where a developer looks.
+ * - `error` is something that actually went wrong and follows `WP_DEBUG`, so
+ *   it surfaces where a developer looks.
  *
- * Funnelling every call through here also keeps the one unavoidable
- * `error_log()` sniff exemption in a single place instead of twenty.
+ * Funnelling the plugin's calls through here keeps its `error_log()` sniff
+ * exemption in one place. The bundled updater does not use this helper: it is
+ * the unmodified JPKCom family copy and logs on its own (since 1.2.13).
  *
  * @since 1.2.7
  *

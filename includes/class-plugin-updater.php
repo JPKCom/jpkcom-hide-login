@@ -9,7 +9,7 @@
  * - SHA256 checksum verification of downloaded packages (fail closed)
  * - URL validation and sanitization of all remote data
  * - Race condition prevention for manifest fetching
- * - Error logging through jpkcom_hide_login_log() (WP_DEBUG)
+ * - Comprehensive error logging in WP_DEBUG mode
  * - Site-transient caching with a ~24-hour TTL (one cache per multisite network)
  * - Family updates: one loaded copy serves every installed JPKCom plugin,
  *   including inactive ones whose own code never runs
@@ -1232,6 +1232,8 @@ final class JPKComGitPluginUpdater {
      * @return void
      */
     private function log( string $message ): void {
-        \jpkcom_hide_login_log( 'Updater: ' . $message, 'error' );
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( 'JPKCom Plugin Updater: ' . $message );
+        }
     }
 }

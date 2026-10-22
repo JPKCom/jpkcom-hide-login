@@ -3,7 +3,7 @@
 **Plugin Name:** JPKCom Hide Login  
 **Plugin URI:** https://github.com/JPKCom/jpkcom-hide-login  
 **Description:** Rename wp-login.php to a custom slug, with brute force protection and IP whitelist management.  
-**Version:** 1.2.12  
+**Version:** 1.2.13  
 **Author:** Jean Pierre Kolb <jpk@jpkc.com>  
 **Author URI:** https://www.jpkc.com/  
 **Contributors:** JPKCom  
@@ -12,7 +12,7 @@
 **Tested up to:** 7.1  
 **Requires PHP:** 8.3  
 **Network:** true  
-**Stable tag:** 1.2.12  
+**Stable tag:** 1.2.13  
 **License:** GPL-2.0-or-later  
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html  
 **Text Domain:** jpkcom-hide-login  
@@ -487,6 +487,10 @@ The plugin uses WordPress options and transients:
 ---
 
 ## Changelog
+
+### 1.2.13
+* Changed: with `WP_DEBUG` on, updater messages in the debug log now read `JPKCom Plugin Updater: …` like those of every other JPKCom plugin, instead of `[JPKCom Hide Login] Updater: …`. Nothing else changes for a running site: update, checksum and leader logic are untouched (updater 1.5.0), and the plugin's own diagnostics keep their prefix. Background: the bundled updater is the unmodified JPKCom family copy again. Since 1.2.7 this plugin's copy logged through its own helper instead of `error_log()`; that was its only difference, and it had to be carried into every updater release by hand
+* Note: WordPress Plugin Check now reports the updater's `error_log()` call, as it does for the other JPKCom plugins; the 1.2.7 statement that every finding except `plugin_updater_detected` was cleared no longer applies to the updater
 
 ### 1.2.12
 * Added: updates for inactive JPKCom plugins. WordPress never runs the code of a deactivated plugin, so its own updater never ran and it was never offered an update. Every JPKCom plugin now ships updater 1.5.0; one copy answers for all installed JPKCom plugins, active or not, with the update row, the icon and "View details". The SHA-256 check applies to an inactive plugin exactly as to an active one. On multisite, at least one JPKCom plugin must be network-active or active on the main site
